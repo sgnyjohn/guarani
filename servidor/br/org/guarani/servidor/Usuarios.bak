@@ -1,0 +1,66 @@
+/*
+ * Signey John jan/2001. 
+ */
+
+package br.nom.signey.guarani;
+
+
+import java.util.*;
+import java.net.*;
+
+import br.nom.signey.util.*;
+
+
+//armazena usuários
+public class Usuarios {
+ protected StrVetor ia;
+ protected int nUsu=0;
+
+
+ //***************************//
+ public Usuarios() {
+  ia = new StrVetor();
+ }
+
+ //***************************//
+ public StrVetor getUsus() {
+  return ia;
+ }
+
+ //***************************//
+ public Usuario getUsu(Socket sk) {
+
+  InetAddress s = sk.getInetAddress();
+  ntUsu ntu = Val.getNtUsuario(s.getHostAddress());
+  if (ntu==null) ntu = new ntUsu("\\\\");
+  return retUsu(s,ntu);
+ }
+
+ //***************************//
+ public boolean invalidaUsu(Socket sk) {
+  InetAddress s = sk.getInetAddress();
+  ntUsu ntu = Val.getNtUsuario(s.getHostAddress());
+  if (ntu==null) {
+  	return false;
+  } else {
+  	ntu.hora = 0;
+  	retUsu(s,ntu);
+  	return true;
+  }
+ }
+
+ //***************************//
+ private synchronized Usuario retUsu(InetAddress i,ntUsu ntu) {
+  Usuario ps = (Usuario)ia.get(i);
+  if (ps==null) {
+   ps = new Usuario(i.getHostAddress(),ntu.nome,ntu.hora,ntu.dominio);
+   ia.put(i,ps);
+  }
+  ps.nv++;
+  ps.nome = ntu.nome;
+  ps.hora = ntu.hora;
+  ps.dominio = ntu.dominio;
+  return ps;
+ }
+
+}

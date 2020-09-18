@@ -1,0 +1,126 @@
+/**
+ *
+ * @author  bhun
+ */
+public class StringTokenizer implements java.util.Enumeration {
+    /** Default delimiters.
+     */
+    private final static String DEFAULT = " \t\n\r\f";
+    
+    /** Buffer for inputstring.
+     */
+    private StringBuffer input;
+    
+    /** Delimiters.
+     */
+    private String delimiters = DEFAULT;
+    
+    /** By default delimiters are not tokens.
+     */
+    private boolean delimiterIsToken = false;
+    
+    /** Tokenize string according to delimiters " \t\n\r\f".
+     */
+    public StringTokenizer(String a) {
+        input = new StringBuffer(a==null?"":a);
+    }
+    
+    /* Specify custom delimiters to tokenize a string with.
+     * @param a String to tokenize
+     * @param b Delimiters
+     */
+    public StringTokenizer(String a, String b) {
+        this(a);
+        delimiters = b;
+    }
+    
+    /** Specify custom delimiters and wheter they are considered tokens
+     * @param a string to tokenize
+     * @param b delimiters
+     * @param c true is delimiters are tokens
+     */
+    public StringTokenizer(String a, String b, boolean c) {
+        this(a,b);
+        delimiterIsToken=c;
+    }
+    /** count number of tokens than can be returned till the end of string.
+     * @return number of tokens left.
+     */
+    public int countTokens() {
+        int i = 0; // start at index 0
+        int n = 0; // zero tokens at start
+        if (input.length() > 0) {
+            while (i<input.length()) {
+                if (delimiters.indexOf(input.charAt(i))==-1) {
+                    n++;
+                    while (i<input.length()&&delimiters.indexOf(input.charAt(i))==-1) i++;
+                } else {
+                    if (delimiterIsToken) n++; i++;
+                }
+            }
+        }
+        return n;
+    }
+    
+    /** @return true more tokens can be returned, false if not
+     */
+    public boolean hasMoreElements() {
+        boolean hasMoreElements = false;
+        if (input.length() > 0) {
+            if (!delimiterIsToken) {
+                found: for (int i = 0 ; i<input.length();i++) {
+                    if (delimiters.indexOf(input.charAt(i))==-1) {
+                        hasMoreElements = true;
+                        break found;
+                    }
+                }
+            } else {
+                hasMoreElements = true;
+            }
+        }
+        return hasMoreElements;
+    }
+    
+    /** @return true more tokens can be returned, false if not
+     */
+    public boolean hasMoreTokens() {
+        return hasMoreElements();
+    }
+    
+    /** @return next token
+     */
+    public Object nextElement() {
+        return nextToken();
+    }
+    
+    /** @return next token
+     */
+    public String nextToken() {
+        int n = 0;
+        String rs = null;
+        if (input.length() > 0) {
+            if (delimiters.indexOf(input.charAt(0))==-1) {
+                delimit: for (n = 1; n < input.length(); n++) {
+                    if (delimiters.indexOf(input.charAt(n))!=-1) break delimit;
+                }
+                rs = input.substring(0,n);
+                input.delete(0,n);
+            } else {
+                rs = input.substring(0,1);
+                input.deleteCharAt(0);
+            }
+        } else {
+            throw new java.util.NoSuchElementException("No more tokens left.");
+        }
+        return rs;
+    }
+    
+    /** Specify new set of delimiters and return next token.
+     * @param spec Set of delimiters.
+     * @return next token according to new specification.
+     */
+    public String nextToken(String spec) {
+        delimiters = spec;
+        return nextToken();
+    }
+}

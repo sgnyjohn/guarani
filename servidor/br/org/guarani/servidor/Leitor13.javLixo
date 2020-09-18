@@ -1,0 +1,112 @@
+/*
+		sjohn@via-rs.net ago/2002
+*/
+package br.org.guarani.servidor;
+
+import java.io.*;
+import java.net.*;
+import javax.servlet.*;
+
+import br.org.guarani.util.*;
+
+
+//***************************
+//***************************
+public class Leitor13 extends DataInputStream
+		implements javax.servlet.ServletInputStream {
+	InputStream i;
+	InputStreamReader in;
+	//InputStream in;
+	int restaPost=0;
+	byte bf[];
+	int tmbf = 1024*8; //maximo do mod_jk
+	HttpAjp13 ht;
+	//para leitor post
+	int pPos=0,pBuf=0,nLid=0;
+
+	/***************************
+	public int read(byte[] buf,int i,int t) throws IOException {
+		return -1;
+	}
+	*/
+ 
+	//***************************
+	public Leitor13(InputStream i) {
+		super(i);
+		bf = new byte[tmbf];
+		this.i = i;
+		in = new InputStreamReader(i);
+	}
+	//***************************//
+	// abaixo feito p/compatipilidade com direto 
+	// com post-multipart qdo
+	// esta usava "extends BufferedReader"
+	// talvez restaPost não seje mais necessário...
+	//
+	public int readLine(byte b[],int i,int t) throws java.io.IOException {
+		byte ch[]=new byte[1];
+		ch[0] = 0;
+		int ci=0,l=-1;
+		t--;
+		while (restaPost>0 && l<t && ch[0]!=10 ) {
+			ci = leB(ch);
+			restaPost--;
+			if (ci==-1) {
+				break;
+			}
+			b[i] = ch[0]; 
+			i++;
+			l++;
+		}
+		return ((l==-1)?l:l+1);
+	}
+	public int readLine1(byte b[],int i,int t) throws java.io.IOException {
+		byte ch[]=new byte[1];
+		ch[0] = 0;
+		int ci,l=0;
+		//t--;
+		while (restaPost>0 && l<t && ch[0]!='\n') {
+			ci = leB(ch);
+			restaPost--;
+			if (ci==-1) {
+				break;
+			}
+			b[i] = ch[0]; 
+			i++;
+			l++;
+		}
+		return l;
+	}
+ 
+	//***************************
+	public int leB(byte b[]) throws java.io.IOException {
+		if (pPos==0) {
+			//ht.o.pedePost(ht.tbf);
+			if (!ht.o.pedePost(tmbf)) {
+				logs.grava("ajp13","ERRO pedidoPost");
+			}
+   
+			int i1,i2,i3;
+			if ((i1 = readShort())!=4660) {
+				logs.grava("ajp13","L: lePost: i1 != 4660");
+			}
+			i2 = readShort();
+			i3 = readShort();
+			if (i2-i3!=2) {
+				logs.grava("ajp13","L: 1="+i1+" 2="+i2+" 3="+i3);
+			}   
+			pPos = i3;
+			//logs.grava("leitor13: pPos=0->"+pPos);
+		}
+		if (pBuf==nLid) {
+			nLid = i.read(bf,0,Math.min(tmbf,pPos));
+			//logs.grava("leitor13: pBuf==nLid="+pBuf+" novo="+nLid);
+			pBuf = 0;
+		}
+		b[0] = bf[pBuf++];
+		pPos--;
+		//logs.grava("leitor13: pBuf="+pBuf+" pPos="+pPos);
+		return 1;
+	}
+ 
+}

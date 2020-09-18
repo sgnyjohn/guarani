@@ -1,0 +1,408 @@
+/*
+ *  Signey John jan/2001.
+ */
+
+package br.nom.signey.guarani;
+
+import br.nom.signey.util.*;
+
+import java.security.*;
+import java.io.PrintWriter;
+import java.util.*;
+import java.text.*;
+import java.io.*;
+
+public class Guarani {
+ protected static Classes cl;
+ protected static String classe_root, classe_root_java, classe_compil;
+ protected static boolean loader;
+
+ //protected String www_root,http_param;
+ protected static Mime tipos;
+ protected int nServ;
+ protected static Hashtable cnf = null;
+ public static Hashtable cnf_jdbc=new Hashtable();
+ protected static String aLogs, aCfg;
+
+ protected static Thread Tarefas[];
+ protected static Servico Servicos[];
+ //protected static Usuarios Usuarios;
+ 
+ public static String dirCfg,dirLogs;
+ 
+ //servlets
+ public static Hashtable sessoes;
+
+ //*********************************
+ public static String getHost() {
+ 	return (String)cnf.get("host");
+ }
+ //*********************************
+ public static String getHostIp() {
+ 	return (String)cnf.get("ip");
+ }
+
+ //*********************************
+ protected static void stop(int i) {
+ 	System.exit(i);
+ }
+
+ //*********************************
+ private static void resetClasses() {
+  if (loader) {
+   cl = new Classes();
+   cl.inicia(classe_root,classe_root_java,classe_compil);
+  }
+ }
+ //*********************************
+ protected static boolean execClasse(String nom, Pedido ped, Gravador o, int nv) {
+  int i=0;
+  String nome = nom.substring(1,nom.length()-6);
+  int r;
+  
+  if (!loader) {
+   //usar classloader JVM
+   return execClasse(nome,ped,o);
+  }
+  
+  if (nv>1) {
+   ped.on("tentativas de exec="+nv+">1");
+   return false;
+  }
+
+  r = 2;
+ 	String se = "classe: "+nome+"<br>";
+  try {
+   r = cl.exec(nome,ped);
+  } catch(AbstractMethodError ame) {
+   ped.erro(se+"Classe não compatível com APLICAÇÃO"+ame);
+  } catch(NoSuchMethodError e) {
+   ped.erro(se+"método definido no serv TESTE mas não no SERV QUENTE"+e);
+  } catch(java.lang.NoSuchFieldError e) {
+   ped.erro(se+"método definido no serv TESTE mas não no SERV QUENTE"+e);
+  } catch(Exception e) {
+   ped.erro(se+"erro na classe",e);
+  }
+
+  if (r==0) {
+   ped.on("Não Existe!!");
+   logs.grava("nexiste","Não Existe CLASSE: "+
+    "execClasse(String nom, Pedido ped, Gravador o, int nv)="+
+    nom+"<br>"+ped);
+   return false;
+  } else if(r==2 || r==4 || r==5) {
+   //0 - não exite
+   //2 - erro exec
+   //4 - erro compilacao
+   //5 - erro carga classe
+   return false;
+  } else if (r==1) {
+   //1 - ok
+   return true;
+  } else if (r==3) {
+   //3 - recarregar
+   resetClasses();
+   return execClasse(nom,ped,o,nv+1); 
+  }
+  
+  ped.erro("resposta exec="+r+" não prevista?",new Exception("?"));
+  return false;
+ }
+
+ 
+ //*********************************
+ // usando classloader JVM
+ protected static boolean execClasse(String nom, Pedido ped, Gravador o) {
+  Class csl = null;
+  nom = str.troca(nom,"/",".");
+  try {
+   csl = Guarani.findClass(nom);
+   if (csl==null) {
+    return false;
+   }
+   Prg classL = null;
+   try {
+    classL=(Prg)csl.newInstance();
+    classL.run(ped);
+    return true;
+   } catch ( Exception t ) {
+    logs.grava("Guarani.execClasse(): "+t);
+    t.printStackTrace();
+    return false;
+   }
+   //.newInstance();
+  } catch (Exception e) {
+   ped.on("Não Existe!!"+nom);
+   logs.grava("nexiste","Não Existe CLASSE: "+
+    "execClasse(String nom, Pedido ped, Gravador o)="+nom+"<br>"+ped);
+   return false;
+  }
+ }
+ 
+ //*********************************
+ public static void main(String args[]) throws IOException  {
+  String c = null, cfg = null;
+
+  //argumento 1 arquivo configuração
+  if (args.length>0) {
+   cfg = str.troca(str.trimm(args[0]),"\\","/");
+  }
+  if (args.length>1) {
+   c = str.troca(str.trimm(args[1]),"\\","/");
+  }
+
+  //rt = Runtime.getRuntime();
+  //Runtime.getRuntime().addShutdownHook(new fim());
+  Provider p[] = Security.getProviders();
+  for (int i=0;i<p.length;i++) {
+  	System.out.println(i+" "+p[i]);
+  }
+
+  try {
+   Guarani g = new Guarani(cfg,c);
+  } catch (InternalError e) {
+   logs.grava("ERRO SAIDA1?: "+e);
+  } catch (OutOfMemoryError e) {
+   logs.grava("ERRO SAIDA2?: "+e);
+  } catch (StackOverflowError e) {
+   logs.grava("ERRO SAIDA3?: "+e);
+  } catch (UnknownError e) {
+   logs.grava("ERRO SAIDA4?: "+e);
+  } catch (VirtualMachineError e) {
+   logs.grava("ERRO SAIDA5?: "+e);
+  }
+
+ }
+
+ //*********************************
+ public Guarani(String cfg, String sOut) {
+  String s;
+  
+
+  System.out.println("iniciando Guarani **************************");
+  //System.out.println("datap: "+(new Date()));
+
+  String os = System.getProperties().getProperty("os.name");
+  if (cfg==null) { 
+   cfg = "../conf/guarani."+os.substring(0,5).toLowerCase();
+   System.out.println("assumindo Arquivo .conf="+cfg); 
+  }
+  //abre arquivo configuração
+  aCfg = cfg;
+  File f = new File(aCfg);
+  if (f.exists()) {
+   try {
+    System.out.println("Arquivo .conf: "+f.getCanonicalPath());
+   } catch (IOException ioe) {
+    System.out.println("ERRO abrindo, Arq .conf: "+aCfg);
+   }
+  } else {
+   System.out.println("Arq .conf nao existe: "+aCfg);
+   System.exit(1);
+  }
+  conf xx = new conf(aCfg);
+  Hashtable h1, h = xx.getConf();
+  cnf = (Hashtable)h.get("Guarani");
+  if (cnf==null) {
+   cnf = (Hashtable)h.get("guarani");
+  }
+  if (cnf==null) {
+   System.out.println("Arquivo .conf INVALIDO, falta seção [Guarani]!!"+aCfg);
+   System.exit(1);
+  }
+
+  dirCfg = (String)cnf.get("dircfg");  
+  if (dirCfg==null) {
+   dirCfg = str.leftRat(aCfg,"/");
+  }
+  dirCfg = str.dir(dirCfg);
+
+  dirLogs = (String)cnf.get("logs");  
+  if (dirLogs==null) {
+   dirLogs = str.leftRat(cfg,"/");
+  }
+  dirLogs = str.dir(dirLogs);
+  
+  aLogs = dirLogs+data.strSql().substring(0,10)+"-";
+  System.out.println("Logs: "+aLogs);
+  System.out.println("Debug: "+(sOut!=null));
+  logs.inicia(aLogs,sOut!=null);
+
+  //System.setErr(new PrintStream());
+
+  logs.grava("O.S.: "+os);
+  logs.grava("dirCfg: "+dirCfg);
+  logs.grava("***************************************************");
+  logs.grava("G U A R A N I   v1.0");
+  logs.grava("por 2001 Signey John - sjohn@via-rs.net");
+
+  tipos = new Mime();
+
+  logs.grava("data: "+data.strHttp());
+
+
+  //instala servicos
+  nServ = h.size();
+  Tarefas = new Thread[nServ];
+  Servicos = new Servico[nServ];
+  int i=0;
+  for (Enumeration e = h.keys() ; e.hasMoreElements() ;) {
+   s = (String)e.nextElement();
+   if (s.toLowerCase().compareTo("guarani")==0) {
+    //cnf = (Hashtable)h.get(s);
+   } else if (s.toLowerCase().compareTo("jdbc")==0) {
+    cnf_jdbc = (Hashtable)h.get(s);
+   } else {
+    h1 = (Hashtable)h.get(s);
+    int nt = Integer.parseInt(str.seNull((String)h1.get("nTask"),"4"));
+    if (nt>0) {
+     Servicos[i] = new Servico(s,h1);
+     Tarefas[i] = new Thread(Servicos[i]);
+     int p = Integer.parseInt(str.seNull((String)h1.get("prioridade"),"5"));
+     Tarefas[i].setPriority(p);
+     //Tarefas[i].setPriority(2);
+     i++;
+     try {Thread.sleep(1000);} catch (InterruptedException ie) {}
+    }
+   }
+   //logs.grava("<hr>"+s);
+  }
+  nServ = i;
+
+  //configurações guarani
+  if (cnf==null) {
+   logs.grava("Alerta Inicialização: sem classes aplicativas");
+  } else {
+   classe_root = (String)cnf.get("classe_root");
+   loader = classe_root.length()>0;
+   if (!loader) {
+    logs.grava("sem loader");
+   }
+   classe_root_java = (String)cnf.get("classe_root_java");
+   classe_compil =  (String)cnf.get("classe_compil");
+   resetClasses();
+  }
+
+  logs.grava("***************************************************");
+  logs.grava("Numero de Serviços: "+nServ);
+  logs.grava("***************************************************");
+
+  Locale.setDefault(new Locale(getCfg("linguagem"),getCfg("pais")));
+  logs.grava("locale: "+Locale.getDefault());
+
+  //
+  //Usuarios = new Usuarios();
+
+  //inicia tarefas
+  for (i=0;i<nServ;i++) {
+   Tarefas[i].start();
+  }
+
+  /*/agenda
+  logs.grava("agenda","INICIO...");
+  String ag = "netstat.exe -a -n";
+  executa ex = new executa();
+  arquivo alog = new arquivo("c:\\teste.txt");
+  while (true) {
+   try {
+    Thread.sleep(120000);
+    logs.grava("agenda","EXEC agenda..."+ag);
+    //Runtime.getRuntime().exec(ag);
+    ex.exec(ag);
+    alog.gravaTxt(str.seNull(ex.getOut(),"null"),true);
+   } catch (InterruptedException ie) {
+    logs.grava("agenda","ERRO agenda: "+ie);
+   //} catch (IOException io) {
+   // logs.grava("ERRO agenda: "+io);
+   }
+  }
+  */
+ }
+
+ //*********************************
+ protected static String getCfg(String a,String b) {
+   return str.seNull(getCfg(a),b);
+ }
+
+ //*********************************
+ protected static String getCfg(String a) {
+   return (String)cnf.get(a);
+ }
+
+ //*********************************
+ protected static String sepDir() {
+   return "/";
+ }
+
+ //*********************************
+ public static Class findClass(String n) {
+  if (loader) {
+   return cl.findClass(n);
+  } else {
+   try {
+    return Class.forName(n);
+    //.newInstance();
+   } catch (Exception e) {
+    logs.grava("Guarani.findClass(): "+n+", não existe: "+e);
+    return null;
+   }
+  }
+ }
+
+ //************************************************
+ // P U B L I C A S
+ public static String getCfgTemp() {
+  return getCfg("temp");
+ }
+
+ //*********************************
+ public static Servico[] getServicos(Pedido ped) {
+  /*if (!ped.segura) {
+   logs.grava("seg","getServicos"+ped);
+   return null;
+  }
+  */
+  return Servicos;
+ }
+
+ //*********************************
+ public static Classes getClasses(Pedido ped) {
+  /*if (!ped.segura) {
+   logs.grava("seg","getClasses"+ped);
+   return null;
+  }
+  */
+  return cl;//.lista;
+ }
+
+ //*********************************
+ public static Thread[] getTarefas(Pedido ped) {
+  /*if (!ped.segura) {
+   logs.grava("seg","getTarefas!"+ped);
+   return null;
+  }
+  */
+  return Tarefas;
+ }
+
+ /*********************************
+ public static Usuarios getUsuarios(Pedido ped) {
+  /*if (!ped.segura) {
+   logs.grava("seg","getUsuarios"+ped);
+   return null;
+  }
+  return Usuarios;
+ }
+ */
+
+ //*********************************
+ public static void resetClasses(Pedido ped) {
+  /*if (!ped.segura) {
+   logs.grava("seg","resetClasse!"+ped);
+   return;
+  }
+  */
+  resetClasses();
+ }
+ 
+}

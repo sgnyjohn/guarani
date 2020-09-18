@@ -1,0 +1,77 @@
+/*
+*/
+
+package br.nom.signey.guarani;
+
+import br.nom.signey.util.*;
+import java.util.*;
+import java.text.*;
+import java.io.*;
+import java.net.*;
+import javax.servlet.*;
+
+//***************************//
+public class Leitor extends BufferedReader implements javax.servlet.ServletInputStream {
+ //public String sErro = "";
+ //public boolean erro = false;
+ InputStreamReader in;
+ int restaPost=0;
+ public Leitor(InputStreamReader i) {
+  super(i);
+  in = i;
+ }
+ public int readLine1(byte b[],int i,int t) throws java.io.IOException {
+ 	String l;
+ 	if (restaPost<1) {
+ 		return -1;
+ 	}
+ 	l = readLine();
+ 	if (l==null) {
+ 		return -1;
+ 	}
+ 	int tr = l.length();
+ 	if (tr>t) {
+ 		tr = t;
+ 	}
+ 	for (int x=0;x<tr;x++) {
+ 		b[i] = (byte)l.charAt(x);
+ 		i++;
+ 	}
+ 	b[i++] = '\r';
+ 	b[i++] = '\n';
+ 	restaPost -= (tr+2);
+ 	return tr+2;
+ }
+ public int readLine(byte b[],int i,int t) throws java.io.IOException {
+ 	char c,ch[]=new char[1];
+ 	int ci=0,l=-1;
+ 	t--;
+ 	while (restaPost>0 && l<t && ch[0]!='\n') {
+ 		ci = in.read(ch,0,1);
+ 		restaPost--;
+	 	if (ci==-1) {
+		 	break;
+ 		}
+ 		//c=(char)ci;
+ 		b[i] = (byte)(ch[0]); 
+	 	i++;
+ 		l++;
+	 }
+ 	return ((l==-1)?l:l+1);
+ }
+
+ public int read(byte[] buf) throws IOException {
+ 	int ci,l=-1,t = buf.length;
+ 	while (restaPost>0 && l<t) {
+ 		ci = in.read();
+ 		restaPost--;
+	 	if (ci==-1) {
+		 	break;
+ 		}
+ 		buf[l]=(byte)ci;
+ 		l++;
+ 	}
+ 	return ((l==-1)?l:l+1);
+ }
+}
+

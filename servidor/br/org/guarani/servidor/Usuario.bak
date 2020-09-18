@@ -1,0 +1,31 @@
+package br.nom.signey.guarani;
+
+import br.nom.signey.util.*;
+
+ public class Usuario {
+  public String ip;
+  public String nome;
+  public long hora;
+  public String dominio;
+  public String cookie,browser;
+  public long nv;
+
+  //validacao
+  public long tm; //tempo desde o último
+  public long nvnt; //vezes iframe
+
+  public Usuario(String i,String n,long h,String d) {
+   ip = i;
+   hora = h;
+   nome = n;
+   dominio = d;
+   nv = 0;
+   browser = "";
+  }
+
+  public String toString() {
+   //return data.strSql(hora);
+   return data.strSql(hora)+"&"+ip+"&"+nome+"&"+dominio+"&"+nv;
+  }
+
+ }

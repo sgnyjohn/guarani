@@ -1,0 +1,287 @@
+/*
+		sjohn@via-rs.net ago/2002
+*/
+
+
+
+package br.org.guarani.servidor;
+
+import java.util.*;
+import java.io.*;
+import java.net.*;
+
+import br.org.guarani.util.*;
+
+class GravadorAjp13 extends Gravador {
+	int tGrav=0;
+	Hashtable vrh;
+
+	long tp;
+	int npac;
+	boolean tpcon=false;
+
+	//******************************
+	protected boolean pedePost(int bf) {
+		try {
+			pBuf = 0;
+			writeStr("AB");
+			writeShort(3);
+			writeByte((char)6);
+			writeShort(bf);
+			out.write(buf,0,7);
+			out.flush();
+		} catch (Exception e) {
+			sErro = "erro pedePost:"+e;
+			logs.grava("ajp13",sErro);
+			erro = true;
+		}
+		return !erro;
+	}
+
+ 
+	//******************************
+	public void montaCab() {
+		tGrav = 1;
+
+		String er="",cab = (new String(buf,0,pBuf));
+		if (cab.length()<4) {
+			logs.grava("ajp13","ERRO montaCab() fechando gravador sem cab...");
+			return;
+		} else if (!str.right(cab,4).equals("\r\n\r\n")) {
+			logs.grava("ajp13","ERRO montaCab() <> de dois cflf");
+		}
+		cab = str.trimm(cab);
+		//logs.grava("cabec="+cab);
+		String v[] = str.palavraA(cab,"\r\n");
+		String s1,s = str.substrAt(v[0]," "); //ignora http
+		String msg = str.substrAt(s," "); //pega msg
+		int code = str.inteiro(str.leftAt(s," "),200);
+
+  	
+		pBuf = 0;
+		writeStr("AB");
+		writeShort(0);
+
+		writeByte((char)4);
+		writeShort(code);
+		writeString(msg);
+  
+		if (tpcon) writeShort(pBuf*5);
+
+		int tm,nc=0,pt = pBuf;
+		writeShort(v.length-1);
+		for (int i=1;i<v.length;i++) {
+			s = str.leftAt(v[i],":");
+			if ("~Server~Date~Connection~".indexOf("~"+s+"~")==-1) {
+				s1 = (String)vrh.get(s);
+				if (s1==null) {
+					writeString(s);
+				} else {
+					writeShort(160*256+str.inteiro(s1,1));
+				}
+				writeString(str.substrAt(v[i],": "));
+				if (tpcon) writeShort(pBuf*5);
+				nc++;
+			}
+		}
+		tm = pBuf;
+		pBuf = pt;
+		writeShort(nc);
+		pBuf = tm;
+
+		gravaBuf();
+
+	}
+
+	//******************************
+	public void close() {
+		//logs.grava("fechando...pBuf="+pBuf);
+		if (tGrav==0) {
+			montaCab();
+		} else {
+			gravaBuf();
+		}
+		try {
+			//logs.grava("pacote final...pBuf="+pBuf);
+			pBuf = 0;
+			writeStr("AB");
+			writeShort(2);
+			writeByte((char)5);
+			writeByte((char)0);
+			out.write(buf,0,6);
+			out.flush();
+			//out.close();
+		} catch (Exception e) {
+			sErro = "erro close:"+e;
+			logs.grava("ajp13",sErro);
+			erro = true;
+		}
+	}
+
+	//******************************
+	public void println() {
+		print("\r\n");
+	}
+	//******************************
+	public void setParam(Hashtable v) {
+		vrh = v;
+	}
+
+	//******************************
+	public GravadorAjp13(OutputStream o) {
+		super(o); //, true);
+		out = o;
+		buf = new byte[tBuf];
+		pBuf = 0;
+		tGrav = 0;
+		tp = data.ms();
+		npac=0;
+	}
+	//******************************
+	public PrintWriter getPrintWriter() {
+		return this;
+		//new PrintWriter(out);
+	}
+	//******************************
+	public void flush() {
+		if (erro) return;
+		gravaBuf();
+	}
+	//******************************
+	public void print(String s) {
+		if (erro) return;
+		int t = s.length();
+		for (int i=0;i<t;i++) {
+			buf[pBuf++] = (byte)s.charAt(i);
+			if (pBuf>=tBuf-1) {
+				gravaBuf();
+			}
+		}
+		if (tGrav==0 && (new String(buf,0,pBuf)).indexOf("\r\n\r\n")!=-1) {
+			//enviar cabec... funciona cab < 4k
+			montaCab();
+			return;
+		}
+	}
+	//******************************
+	public void println(String s) {
+		print(s+"\r\n");
+	}
+	//******************************
+	public boolean checkError() {
+		//flush();
+		return erro;
+	}
+	//******************************
+	protected void gravaBuf() {
+		if (pBuf<8 || erro) return;
+		try {
+			int t = pBuf;
+ 		
+			//grava tam head
+			pBuf = 2;
+			writeShort(t-4);
+			if (buf[4]==3) {
+				pBuf = 5;
+				writeShort(t-7);
+			}
+   
+			//logs.grava(new Exception("gravaBuf"),"npac="+npac+" tam="+t);
+			out.write(buf,0,t);
+			//out.flush();
+
+		} catch (Exception e) {
+			erro = true;
+			sErro = "erro gravaBuf:"+e;
+			logs.grava("ajp13",sErro);
+		}	
+		//reserva o proximo
+		pBuf = 0;
+		writeStr("AB");
+		writeShort(0);
+		writeByte((char)3);
+		writeShort(0);
+	}
+	//******************************
+	private void writeString(String s) {
+		writeShort(s.length()+(tpcon?2:0));
+		writeStr(s);
+		buf[pBuf++] = 0;
+	}
+	//******************************
+	private void writeStr(String s) {
+		int t = s.length();
+		for (int i=0;i<t;i++) {
+			buf[pBuf++] = (byte)s.charAt(i);
+		}
+	}
+	//******************************
+	public void writeByte(char s) {
+		buf[pBuf++] = (byte)s;
+	}
+	//******************************
+	public void writeShort(int in) {
+		buf[pBuf++] = (byte)(in/256);
+		buf[pBuf++] = (byte)(in%256);
+	}
+
+	/*
+			//3E e 3C >< = ? dec = tamanho cabec...? em bytes? (parece fixo) 67 68 "gh"
+			//00 e 01 ? n cabec... no caso 1.
+			//A0 e 01 (string codif) e tam 00 0B - incluindo o inteiro exceto o zero
+			//string tam 9 e zero
+			// 3C 2F "</" fixo também 62 67 "bg"
+   
+			//apos chuk
+			//"AB" 05 B7 03 05 B3 <html> ... no fim 0A 00 - trocas linha 0A
+			//"AB" 02 ED 03 02 E9 <html>
+			//"AB" 00 C6 03 00 C2 <html>
+   
+   
+			/*er = "AB2";
+			writeChars("AB");
+			er = "msg.l";
+			writeShort(msg.length());
+			er = "msg";
+			writeChars(msg);
+			er = "zero";
+			writeByte(0);
+
+		AJP13_SEND_BODY_CHUNK := 
+		"AB"
+		inteiro(?);
+		prefix_code   3
+		chunk_length  (integer)
+		chunk        *(byte)
+
+
+		AJP13_SEND_HEADERS :=
+		"AB"
+		inteiro(?) 00 1c / 00 6c
+		prefix_code       4
+		http_status_code  (integer)
+		http_status_msg   (string)
+
+		inteiro(?) 
+		num_headers       (integer)
+		response_headers *(res_header_name header_value, inteiro? )
+
+		res_header_name := 
+				sc_res_header_name | (string)   [see below for how this is parsed]
+
+		sc_res_header_name := 0xA0 (byte)
+
+		header_value := (string)
+
+		AJP13_END_RESPONSE :=
+		prefix_code       5
+		reuse             (boolean)
+
+
+		AJP13_GET_BODY_CHUNK :=
+		prefix_code       6
+		requested_length  (integer)
+
+	*/
+
+}

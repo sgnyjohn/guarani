@@ -1,0 +1,31 @@
+/*
+ * Signey John jan/2001.
+ interface para acesso JDBC e cliODBC
+
+ */
+
+package br.org.guarani.servidor;
+
+import br.org.guarani.util.*;
+
+import java.io.PrintWriter;
+import java.util.*;
+
+import java.sql.*;
+
+//atende pedido http - thread
+public class Jdbc {
+
+
+
+
+
+ //********************************
+ //atende pedido
+ public void run() {
+
+
+ }
+
+
+}

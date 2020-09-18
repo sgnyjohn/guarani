@@ -1,0 +1,725 @@
+/*
+ * sjohn@via-rs.net jan/2001 - 
+ * sjohn@via-rs.net ago/2002 - kepp-alive
+*/
+
+
+package br.nom.signey.guarani;
+
+//import
+ import br.nom.signey.util.*;
+
+ import java.net.*;
+ import java.io.*;
+ import java.lang.*;
+ import java.util.*;
+
+//********************************
+//********************************
+class HttpKA extends ProtocoloAbstrato {
+ private Hashtable pd;
+ protected Leitor i;
+ protected Gravador o;
+
+ protected boolean multiPart = false;
+
+ protected int tBf = 1024*4;
+ protected byte[] buf = new byte[tBf];
+
+ protected String get, geto, param, term, ext, cgi, get1;
+ protected Hashtable cnf;
+ protected File arq;
+ protected boolean classe,debugp=false,servlet;
+ protected Pedido pedido;
+
+ //servlet
+ protected static Hashtable servlets;
+ //tranf guarani = public static Hashtable sessoes;
+ protected String servletN;
+
+ private String www_root;
+ private Hashtable www_vdirs=null;
+
+ //********************************
+ public void run() {
+  keepAliveN = 0;
+ 	try {
+  	sp.setKeepAlive(true);
+  } catch (Exception e) {
+  	logs.grava(e+" erro setKeep="+sp);
+  }
+  
+  while (run1()) {
+ 		keepAlive++;
+  	keepAliveN++;
+  }
+ }
+
+ //********************************
+ public boolean run1() {
+  nPedidos++;
+  in = System.currentTimeMillis();
+  pd = new Hashtable();
+
+  abreStream();
+
+  keepAliveB = false;
+  if (!erro & rodando) {
+   lePedido();
+  }
+
+  //POST
+  get1 = (String)pd.get("?endereco");
+
+  if (!erro & rodando) {
+   pedido = new Pedido(pd);
+   pedido.setOut(o,sp);
+
+   if (((String)pd.get("?")).compareTo("POST")==0) {
+    lePost();
+    if (multiPart) {
+    	//input stream para POST multipart
+     pedido.io = i;
+    }
+   }
+  }
+
+  //analiza PEDIDO
+  if (!erro & rodando) {
+   analizaPedido();
+  }
+
+  //analiza se modificado
+  if (!erro & rodando) {
+   cgi = Guarani.tipos.getCgi(ext);
+   if (!classe & cgi==null & ext.compareTo("dir")!=0) {
+    //logs.grava("modificado="+ext+"="+get);
+    arqModificado();
+   }
+  }
+
+  if (!erro & rodando) {
+
+   //monta cebecalho
+   //-logs.grava(get);
+   pedido.cab = "HTTP/1.1 200 OK"+lf+respp();
+   if (classe | cgi!=null | ext.compareTo("dir")==0) {
+    pedido.cab += "Content-Type: "+Guarani.tipos.getTipo(".html")+lf
+                + "Cache-Control: private"+lf
+                + "Cache-Control: no-store"+lf
+    ;
+    if (keepAliveB) {
+    	pedido.cab += "Keep-Alive: timeout=15, max=100"+lf
+                 + "Connection: Keep-Alive"+lf;
+    }
+   } else {
+    pedido.cab += "Content-Type: "+Guarani.tipos.getTipo(ext)+lf
+                + "Last-Modified: "+data.strHttp(arq.lastModified())+lf
+                + "Content-Length: "+arq.length()+lf
+    ;
+   }
+
+   //gera a resposta
+  // File f = new File(get);
+   if (classe) {
+    //classes compiladas com serv start
+    //Campo.setOut(o);
+    if (servlet) {
+    	pedido.servletP = new Hashtable();
+    	pedido.servletP.put("?",pd);
+    	pedido.servletP.put("Gconf",servlets.get(servletN));
+    	//pedido.servletP.put("geto",geto);
+    }
+    Guarani.execClasse(geto,pedido,o,0);
+
+   } else if (ext == "dir") {
+    mostradir(get,geto);
+
+   } else if ((ext.compareTo(".class")==0 | ext.compareTo(".java")==0)
+      & get.indexOf("applets")<0) {
+    o.println("<html><h1>Extenssão invalida="+get+" "+ext+"</h1></html>");
+
+   } else {
+    if (cgi==null) {
+     mandahtm();
+    } else {
+     execCgi(cgi);
+    }
+   }
+
+  }
+
+  geto = data.strSql(in)+" "+geto+"<br>"+sp;
+ 
+  if (keepAliveN>0) {
+  	if (erro) {
+  		logs.grava(keepAliveN+", k c/erro!!");
+  	} else {
+  		logs.grava(keepAliveN+", k s/erro!!");
+  	}
+  }
+
+  try {
+  	o.println();
+   o.flush();
+  } catch (Exception e) {
+  	erro = true;
+   logs.grava(e,"o.flush() sp="+sp,"task");
+  }
+  
+  //fechar primeiro out sempre????---!!!!
+  if (!keepAliveB || erro) {
+   try {
+    o.close();
+   } catch (Exception e) {
+  	 erro = true;
+    logs.grava(e,"fechando ka o. sp="+sp,"task");
+   }
+   try {
+    i.close();
+   } catch (Exception e) {
+   	erro = true;
+    logs.grava(e,"fechando i. sp="+sp,"task");
+   }
+   
+   try {
+    sp.close();
+   } catch (IOException ioe) {
+    logs.grava(ioe,"fechando sp. sp="+sp,"task");
+    erro = true;
+   }
+   fi = System.currentTimeMillis();
+   nBytes += pedido.getBytes();
+   tempo += fi-in;
+   rodando = false;
+   return rodando;
+
+  } else {
+  	//o.print("\r\n0\r\n\r\n");
+  	//o.flush();
+   fi = System.currentTimeMillis();
+   nBytes += pedido.getBytes();
+   tempo += fi-in;
+   return true;
+  }
+
+ }
+
+ //********************************
+ //atende pedido
+ private void abreStream() {
+  try {
+   if (!keepAliveB) {
+    i = new Leitor(new InputStreamReader(sp.getInputStream()));
+    o = new Gravador(sp.getOutputStream());
+   } else {
+   	//sp.setKeepAlive(true);
+   	sp.setSoTimeout(15000);
+   }
+  } catch( final IOException ioe ) {
+   logs.grava(ioe,"Abrindo Stream","task");
+   erro = true;
+  }
+ }
+
+ 
+ //********************************
+ //inicializa
+ public void init(Hashtable c) {
+  rodando = false;
+  erro = false;
+  cnf = c;
+  tempo = 0;
+  nPedidos = 0;
+  nBytes = 0;
+  keepAlive = 0;
+  
+  www_root = (String)cnf.get("www_root");
+  String s = (String)cnf.get("www_vdirs");
+  debugp = str.seNull((String)cnf.get("debugp"),"").equals("on");
+  
+  if (s!=null) {
+   www_vdirs = new Hashtable();
+   String v[] =  str.palavraA(str.troca(s,"\\","/"),";");
+   for (int i=0;i<v.length;i++) {
+    if (v[i].indexOf("=")>0)
+     www_vdirs.put(str.trimm(str.leftAt(v[i],"="))+"/",
+                     str.trimm(str.substrAt(v[i],"="))
+                  );
+   }
+  }
+  
+  //servlet
+  if (servlets==null) {
+   int i=0;
+   Guarani.sessoes =  new Hashtable();
+   servlets = new Hashtable();
+   while ((s=(String)cnf.get("servlet"+i))!=null) {
+  	 //logs.grava("servlet",i+"="+s);
+  	 servlets.put(str.leftAt(s,"~"),str.palavraA(s,"~"));
+  	 i++;
+   }
+  }
+
+ }
+ //********************************
+ //
+ //public static Hashtable getSessoes() {
+ //	return sessoes;
+ //}
+ //********************************
+ //seta socket
+ public void setSocket(Socket s) {
+  sp = s;
+  erro = false;
+  classe = false;
+  servlet = false;
+  geto = "";
+  get1 = "";
+  get = "";
+ }
+ //********************************
+ //le pedido
+ private void lePedido() {
+  String sPedido = " ",np,pr;
+  int nl = 0;
+
+  try {
+   while (sPedido.length()!=0 & rodando &!erro) {
+    //pedido = new String(i.readLine().getBytes());
+    //sPedido = i.readLine();
+    sPedido = i.readLine();
+    if (debugp) {
+     logs.grava(sPedido);
+    }
+    nl++;
+    if (sPedido==null) {
+     erro = true;
+     sPedido = "";
+
+    } else if (nl==1) {
+     pd.put("?",str.leftAt(sPedido," "));
+     pd.put("?endereco",str.substrAtRat(sPedido," "," "));
+     pd.put("?protocolo",str.rightAt(sPedido," "));
+
+    } else if (sPedido.length()!=0) {
+    	np = str.leftAt(sPedido,":").toLowerCase();
+    	pr = str.substrAt(sPedido," ");
+    	if (np.equals("keep-alive") && sp.getKeepAlive()) {
+    		logs.grava("keep-alive="+pr);
+    		keepAliveB = true;
+    	}
+     pd.put(np,pr);
+    }
+   }
+
+  } catch (IOException ioe) {
+   logs.grava(ioe,"lendo Pedido, ln lidas="+nl+"<br>sp="+sp+"<br>ped="+pd,"task");
+   erro = true;
+   geto = "ERRO LENDO PEDIDO!!";
+  }
+  
+  if (debugp) {
+   logs.grava(""+pd);
+  }
+
+ }
+
+ //********************************
+ //le POST
+ private void lePost() {
+  long t = System.currentTimeMillis();
+
+  int read;
+  String ln1="",l;
+  //Content-Type: application/x-www-form-urlencoded
+  //Content-Type: multipart/form-data; boundary=---------------------------7d1295376039c
+  String tipo = (String)pd.get("content-type");
+  int nr, tm = Integer.parseInt((String)pd.get("content-length"));
+
+  multiPart = tipo.substring(0,10).compareTo("multipart/")==0;
+ 	if (multiPart) {
+ 		i.restaPost = tm;
+  	logs.grava("MultiPart tm="+tm);
+ 		return;
+ 	}
+  byte[] cbuf = new byte[1024];
+
+  try {
+   if (multiPart) {
+    //parece que o tomcat não trata isso, e sim permite passar
+    //para o httpservlet o inputstream...
+    logs.grava("tipo post não implementado!!");
+    //int nr,s = 0;
+    ln1="";
+    while (tm > 0 ) {
+     nr = i.read(cbuf, 0, ((tm>1024) ? 1024 : tm));
+     //nr = i.read(cbuf, 0, tm);
+     //logs.grava("leu:"+nr+" falta: "+tm);
+     if (nr>0) {
+      tm -= nr;
+      ln1 += new String(cbuf,0,nr);
+     } else {
+      tm = 0;
+     }
+    }
+    arquivo a = new arquivo("/tmp/teste.post");
+    a.gravaTxt(ln1);
+    if (true) return;
+
+    String nm="",vr="",aq="",aqt="";
+    String bd = "--"+str.substrAtAt(tipo+" ","boundary="," ");
+    int s=0;
+    logs.grava("multipart="+bd);
+    while (tm > 0 ) {
+     l = i.readLine();
+     nr = l.length()+2;
+     tm -= nr;
+     //logs.grava("leu:"+nr+" falta: "+tm+" "+l);
+     if (l.compareTo(bd)==0 | l.compareTo(bd+"--")==0) {
+      //logs.grava("SEPARADOR s="+s+" nm="+nm);
+      if (s==0) {
+       s = 1;
+      } else if (s==4) {
+       ln1 += "&"+nm+"="+vr.substring(0,vr.length()-2);
+       s = 1;
+      } else {
+       logs.grava("ERRO bd não esperado no post s="+s);
+      }
+
+     } else if (s==1) {
+      //nome, etc..
+      if (str.compareTo(l,"Content-Disposition:")) {
+       nm = str.substrAtAt(l," name=\"","\"");
+       aq = null;
+       vr = "";
+       if (l.indexOf(" filename=\"")>-1) {
+        aq=str.substrAtAt(l," filename=\"","\"");
+        logs.grava("AQ="+aq);
+        s = 2;
+       } else {
+        s = 3;
+       }
+      } else {
+       logs.grava("ERRO esperado content disp="+l);
+      }
+
+     } else if (s==2) {
+      //arquivo = tipo
+      if (str.compareTo(l,"Content-Type:")) {
+       aqt = str.substrAt(l,"Content-Type: ");
+      } else {
+       logs.grava("ERRO esperado tipo arq="+l);
+      }
+      s = 3;
+
+     } else if (s==3) {
+      //linha em branco
+      if (l.length()!=0) {
+       logs.grava("Esperado linha em branco");
+      }
+      s = 4;
+
+     } else if (s==4) {
+      //dados
+      vr += l+"\r\n";
+
+     } else {
+      if (str.compareTo(l,"--")) {
+       logs.grava("=="+bd+"="+bd.length()+"=\r\n=="+l+"="+l.length()+"=");
+      }
+
+     }
+    }
+    logs.grava(ln1);
+    pedido.setGet(ln1);
+
+   } else {
+    //o.println("HTTP/1.0 100 Continue\r\n");
+    //tm += 2;
+    while (tm > 0 ) {
+     nr = i.read(cbuf, 0, ((tm>1024) ? 1024 : tm));
+     //nr = i.read(cbuf, 0, tm);
+     //logs.grava("leu:"+nr+" falta: "+tm);
+     if (nr>0) {
+      tm -= nr;
+      ln1 += new String(cbuf,0,nr);
+     } else {
+      tm = 0;
+     }
+    }
+    //logs.grava(ln1);
+    //logs.grava("tempo post="+(System.currentTimeMillis()-t));
+    pedido.setGet(ln1);
+   }
+
+  } catch (Exception e) {
+   logs.grava( "Http.class: Error. lendo Post="+e+"\r\n=="+sp+"\r\n=="+pd );
+   erro = true;
+   geto = "ERRO LENDO POST!!";
+  }
+
+  //logs.grava("tempo post="+(System.currentTimeMillis()-t));
+
+ }
+ //********************************
+ //analiza pedido
+ private void analizaPedido() {
+  get = str.troca((String)pd.get("?endereco"),"%C2%A9","©");
+  //logs.grava(get);
+  //rever linha abaixo desaparece...
+  get = str.UnEscape(get);
+  int i = get.indexOf('?');
+  if (i!=-1) {
+   pedido.queryString = get.substring(i+1,get.length());
+   pedido.setGet(pedido.queryString);
+   get = get.substring(0,i);
+  }
+
+  //segurança, descoberta fábio
+  //não permitir endereços com ..
+  //o que permite ler toda a unidade
+  //em caso do serv ter permissão para isto
+  if (get.indexOf("..")>-1) {
+   o.println("Erro, pedido inválido...");
+   geto = "ERRO, uso de .. "+get;
+   erro = true;
+   return;
+  }
+
+  //ver extenção
+  ext = "";
+  i = get.lastIndexOf(".");
+  int i1 = get.lastIndexOf("/");
+  if (i>-1 & i1<i) {
+   ext = get.substring(i,get.length());
+   //logs.grava("ext -> "+ext);
+  }
+
+  geto = get;
+  get = www_root+get;
+  //diretório virtual?
+  if (www_vdirs!=null) {
+   String s = geto.substring(1);
+   //logs.grava(s);
+   s = "/"+str.leftAt(s,"/")+"/";
+   //logs.grava(s);
+   String s1 = (String)www_vdirs.get(s);
+   //logs.grava(s1);
+   if (s1!=null) get = s1+geto.substring(s.length()-1);
+  }
+
+  if (ext=="") {
+   if ((new File(get + "/index.html")).exists()) {
+    ext = ".html";
+    get = get + ((get.substring(get.length()-1,get.length()).compareTo("/")==0) ? "" : "/")+"index.html";
+   } else {
+    //é servlet...?
+    for (Enumeration e = servlets.elements() ; e.hasMoreElements() ;) {
+     String s[] = (String[])e.nextElement();
+    	//logs.grava("servlet","TESTANDO geto="+geto);
+     if (str.compareTo(geto,s[1])) {
+     	//logs.grava("servlet","detect servlet="+get);
+     	ext = ".class";
+     	geto = s[2];
+     	servlet = true;
+     	servletN = s[0];
+     	break;
+     }
+    }
+    if (ext=="") {
+     ext = "dir";
+    }
+   }
+  }
+
+  //linhas exluidas em 2002-07-23 - não sei o que é
+  /*
+  if (ext.compareTo(".obj")==0) ext = ".class";
+  if (ext.compareTo("dir")==0 && (new File(get+".class")).exists()) {
+   logs.grava("servlet",get);
+   ext = ".class";
+   get += ".class";
+  }
+  */
+
+  classe = (ext.compareTo(".class")==0 & get.indexOf("applets")<0);
+
+  //existe arquivo?
+  if (!classe) {
+   arq = new File(get);
+   if (!arq.exists() | !arq.canRead()) {
+    String ss = "nao existe\t'"+geto+"'\t'"+get+"'\t"+pd.get("referer")+"\t"+sp;
+    logs.grava("nexiste",ss);
+    resp("HTTP/1.0 404 Not Found");
+    o.println();
+    o.println("<html><body>Http: Não existe!!</body></html>");
+
+    rodando = false;
+    erro = true;
+   }
+  }
+ }
+ //********************************
+ //arq Modificado
+ private void arqModificado() {
+  String s = (String)pd.get("if-modified-since");
+  if (s!=null) {
+   //logs.grava(s);
+   if (s.indexOf(";")>-1) s = str.leftAt(s,";");
+   //falta verif tamanho
+   if (s.compareTo(data.strHttp(arq.lastModified()))==0) {
+    //logs.grava("não modif!!");
+    resp("HTTP/1.0 304 Not Modified");
+    o.println();
+
+    rodando = false;
+   }
+  }
+ }
+ //********************************
+ //resposta padrao
+ private void resp(String ln1) {
+  o.println(ln1);
+  o.print(respp());
+ }
+ //********************************
+ //resposta padrao
+ private String respp() {
+  return "Server: Guarani 1.1"+lf+
+         "Date: "+data.strHttp()+lf;
+ }
+ //********************************
+ //mostra dir
+ private void mostradir(String dir,String geto) {
+  pedido.on("<html>Diretório: "+dir+"<hr><table>");
+
+  File[] f = (new File(dir)).listFiles();
+  try {
+   for (int i=0;i<1000;i++) {
+    if (f[i].isDirectory()) {
+     String e = str.dir(geto)+f[i].getName()+"/\">"+f[i].getName();
+     pedido.println("<tr><td><a href=\""+e+"</a><td align=right>");
+     pedido.print("dir");
+    } else {
+     String e = str.dir(geto)+f[i].getName()+"\">"+f[i].getName();
+     pedido.println("<tr><td><a href=\""+e+"</a><td align=right>");
+     pedido.print(""+f[i].length());
+    }
+
+    //finalizar?
+    if (!rodando) i = 2000;
+
+   }
+  } catch (ArrayIndexOutOfBoundsException e) {
+  }
+  pedido.println("</table><hr></html>");
+ }
+ //********************************
+ //manda htm
+ private void mandahtm() {
+  try {
+   //InputStreamReader r = new InputStreamReader(new FileInputStream(f));
+   OutputStream oo = sp.getOutputStream();
+   InputStream r = new FileInputStream(arq);
+   int read = 0;
+   while (!o.checkError() & (read = r.read(buf,0,tBf)) != -1) {
+    oo.write(buf, 0, read);
+    oo.flush();
+    nBytes += read;
+   }
+   r.close();
+  } catch (IOException e ) {
+   o.println("ERRO ARQ "+arq.getPath()+"<br>");
+    o.println(e.toString());
+  }
+ }
+ //********************************
+ //exec cgi
+ private void execCgi(String cgi) {
+  executa e = new executa();
+  //REQUEST_METHOD=GET ou POST
+  //se get - QUERY_STRING
+  //se post - CONTENT_TYPE, CONTENT_LENGHT
+
+  //desativado - não usado....
+  //e.exec(cgi+" "+arq.getPath());
+  o.println(str.substrAt(e.getOut(),lf+lf));
+ }
+ //********************************
+ public String getPedido() {
+  if (rodando) {
+   if (geto.length()==0) {
+    return get1+"<br>"+sp+"<br>"+getSocketStatus();
+   } else {
+    return geto+"<br>"+sp+"<br>"+getSocketStatus();
+   }
+  } else {
+   return geto;
+  }
+ }
+ //********************************
+ private String getSocketStatus() {
+  String r = "";
+  try {
+   //gcc##
+   //r += " getKeepAlive()="+sp.getKeepAlive();
+   r =" getReceiveBufferSize()="+sp.getReceiveBufferSize()
+     +" getSendBufferSize()="+sp.getSendBufferSize()
+     +" getSoLinger()="+sp.getSoLinger()
+     +" getSoTimeout()="+sp.getSoTimeout()
+     +" getTcpNoDelay()="+sp.getTcpNoDelay()
+     +" getKeepAlive()="+sp.getKeepAlive();
+  } catch (java.net.SocketException e) {
+   r += "<br>ERRO: "+e;
+  }
+  return r;
+ }
+}
+
+/*
+ ver página: http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.txt
+
+ The individual values of the numeric status codes defined for
+   HTTP/1.1, and an example set of corresponding Reason-Phrase's, are
+   presented below. The reason phrases listed here are only
+   recommended -- they may be replaced by local equivalents without
+   affecting the protocol. These codes are fully defined in Section 9.
+
+       Status-Code    = "100"   ; Continue
+                      | "101"   ; Switching Protocols
+                      | "200"   ; OK
+                      | "201"   ; Created
+                      | "202"   ; Accepted
+                      | "203"   ; Non-Authoritative Information
+                      | "204"   ; No Content
+                      | "205"   ; Reset Content
+                      | "206"   ; Partial Content
+                      | "300"   ; Multiple Choices
+                      | "301"   ; Moved Permanently
+                      | "302"   ; Moved Temporarily
+                      | "303"   ; See Other
+                      | "304"   ; Not Modified
+                      | "305"   ; Use Proxy
+                      | "400"   ; Bad Request
+                      | "401"   ; Unauthorized
+                      | "402"   ; Payment Required
+                      | "403"   ; Forbidden
+                      | "404"   ; Not Found
+                      | "405"   ; Method Not Allowed
+                      | "406"   ; None Acceptable
+                      | "407"   ; Proxy Authentication Required
+                      | "408"   ; Request Timeout
+                      | "409"   ; Conflict
+                      | "410"   ; Gone
+                      | "411"   ; Length Required
+                      | "412"   ; Unless True
+                      | "500"   ; Internal Server Error
+                      | "501"   ; Not Implemented
+                      | "502"   ; Bad Gateway
+                      | "503"   ; Service Unavailable
+                      | "504"   ; Gateway Timeout
+                      | extension-code
+
+
+ */

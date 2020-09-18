@@ -1,0 +1,104 @@
+/*
+ */
+
+package br.nom.signey.guarani;
+
+import br.nom.signey.util.*;
+import java.util.*;
+import java.text.*;
+import java.io.*;
+import java.net.*;
+
+//***************************//
+public class Leitor {
+ //private BufferedInputStream imp;
+ //private BufferedReader imp;
+ private InputStream imp;
+ private int tmx;
+ private byte[] buf;
+ public boolean erro = false;
+ private static String lf = "\r\n";
+ public String sErro;
+
+ //***************************//
+ public Leitor(Socket s) {
+  tmx = 2048;
+  init(s);
+ }
+ //***************************//
+ public Leitor(Socket s, int i) {
+  tmx = i;
+  init(s);
+ }
+
+ //***************************//
+ private void init(Socket s) {
+  buf = new byte[tmx];
+  try {
+   //imp = new BufferedInputStream(s.getInputStream());
+   imp = s.getInputStream();
+   //imp = new BufferedReader(new InputStreamReader( s.getInputStream() ));
+  } catch (Exception e) {
+   erro = true;
+  }
+ }
+
+ //***************************//
+ public String readLine() {
+  boolean fim = false;
+  int n,tl = 0;
+
+  try {
+   while ( !fim && tl<tmx && (n=imp.read(buf,tl,1))==1 ) {
+    if (buf[tl]=='\r') {
+     //ignora
+    } else if (buf[tl]=='\n') {
+     //fim linha
+     fim = true;
+    } else {
+     tl++;
+    }
+   }
+  } catch (Exception e) {
+   erro("Erro Leitura="+e);
+   return null;
+  }
+
+  if (tl == tmx) {
+   erro("estouro buffer!!");
+  }
+
+  return new String(buf,0,tl);
+
+ }
+
+ //***************************//
+ public int read(byte bf[],int pos,int nb) {
+  try {
+   return imp.read(bf,pos,nb);
+  } catch (Exception e) {
+   erro("erro leitura, read");
+   return -1;
+  }
+ }
+
+ //***************************//
+ public void close() {
+  try {
+   imp.close();
+  } catch (Exception e) {
+   erro("erro fechando, close");
+  }
+ }
+
+
+
+ //***************************//
+ private void erro(String s) {
+  sErro = s;
+  erro = true;
+  logs.grava("err","Leitor.class, "+s);
+ }
+
+}
+

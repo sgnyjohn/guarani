@@ -1,0 +1,19 @@
+package br.nom.signey.guarani;
+
+import br.nom.signey.util.*;
+
+//********************************
+//********************************
+public class ntUsu {
+ public String dominio,ip,ses;
+ public String nome;
+ public long hora;
+ //********************************
+ public Usuario(String pip,String pses,String us) {
+ 	ip = pip;
+ 	ses = pses;
+  dominio = str.leftAt(us,"\\\\");
+  nome = str.substrAt(us,"\\\\");
+  hora = data.ms();
+ }
+}

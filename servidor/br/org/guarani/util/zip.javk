@@ -1,0 +1,13 @@
+/*
+	* Signey John mai/2004 
+*/
+
+package br.org.guarani.util;
+
+import java.util.StringTokenizer;
+import java.io.*;
+import java.security.*;
+
+public class zip {
+}
+

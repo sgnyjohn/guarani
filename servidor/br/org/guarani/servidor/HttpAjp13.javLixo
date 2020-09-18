@@ -1,0 +1,273 @@
+/*
+	* sjohn@via-rs.net ago/2002 
+*/
+package br.org.guarani.servidor;
+
+	import br.org.guarani.util.*;
+
+	import java.net.*;
+	import java.io.*;
+	import java.lang.*;
+	import java.util.*;
+
+//********************************
+//********************************
+class HttpAjp13 extends Http {
+	//private DataInputStream i;
+	private Leitor13 i;
+	GravadorAjp13 o;
+	int tm,tbf=1024*8; //maximo do mod_jk?
+	private byte bf[] = new byte[tbf];
+	private static String vh[] = str.palavraA(
+		"0~accept~accept-charset~accept-encoding"
+		+"~accept-language~authorization~connection"
+		+"~content-type~content-length~cookie~cookie2~host~pragma"
+		+"~referer~user-agent","~");
+	private static String vf[] = str.palavraA(
+				"?protocolo~?endereco~remote_addr~remote_host~server_name","~");
+				//"protocol~req_uri~remote_addr~remote_host~server_name","~");
+	private static String vm[] = str.palavraA(
+		"0~OPTIONS~GET~HEAD~POST~PUT~DELETE~TRACE~PROPFIND"
+		+"~PROPPATCH~MKCOL~COPY~MOVE~LOCK~UNLOCK~ACL","~");
+	private static String vo[] = str.palavraA(
+		"0~context~servlet_path~remote_user~auth_type~query_string"
+		+"~jvm_route~ssl_cert~ssl_cipher~ssl_session~req_attribute","~");
+	private static String vr[] = str.palavraA(
+		"0~Content-Type~Content-Language~Content-Length"
+		+"~Date~Last-Modified~Location~Set-Cookie~Set-Cookie2"
+		+"~Servlet-Engine~Status~WWW-Authenticate","~");
+	private static Hashtable vrh;
+
+	//********************************
+	public void init(Hashtable c) {
+		super.init(c);
+		if (permissao.equals(" * ")) {
+			permissao = " 127.0.0.1 ";
+		}
+	}
+	//********************************
+	//le pedido
+	protected void lePedido() {
+		pd = new Hashtable();
+		try {
+			int b1,b2;
+			b1 = i.readUnsignedByte();
+			b2 = i.readUnsignedByte();
+			tm = i.readShort();
+			tm -= 1; //4...(n+3)
+			//logs.grava("b1="+b1+" b2="+b2+" tm="+tm);
+
+			int tipo,metodo;
+			tipo = i.readUnsignedByte();
+			metodo = i.readUnsignedByte();
+			tm -= 2;
+			//logs.grava("tipo="+tipo+" metodo="+metodo);
+			pd.put("?",vm[metodo]);
+
+			int nl=0;
+			String s,s1;
+			while (nl<vf.length) {
+				s = lePedidoString();
+				pd.put(vf[nl],s);
+				//logs.grava(vf[nl]+"="+s);
+				nl++;
+			}
+   
+			int sp,ssl,nh;
+			sp = i.readShort();
+			pd.put("o_server-port",""+sp);
+			ssl = i.readUnsignedByte();
+			pd.put("o_ssl",""+ssl);
+			nh = i.readShort();
+			tm -= 5;
+			//logs.grava("sp="+sp+" ssl="+ssl+" nh="+nh);
+  
+			//le nh cabecalhos
+			while (nh>0) {
+				b1 = i.readUnsignedByte();
+				b2 = i.readUnsignedByte();
+				tm -=2;
+				if (b1==160) {
+					s = lePedidoString();
+					//logs.grava("b2="+vh[b2]+"="+s);
+					pd.put(vh[b2],s);
+				} else {
+					b1 = b1*256 + b2;
+					s = lePedidoString(b1);
+					s1 = lePedidoString();
+					//logs.grava("t="+b1+" "+s+"="+s1);
+					pd.put(s,s1);
+				}
+				nh--;
+			}
+
+			//le options - inclusive query_string
+			while (tm>0) {
+				b1 = i.readUnsignedByte();
+				tm -= 1;
+				s = lePedidoString();
+				if (b1==5 && metodo==2) {
+					//query_string
+					s1 = (String)pd.get("?endereco");
+					pd.remove("?endereco");
+					pd.put("?endereco",s1+"?"+s);
+     
+				} else {
+					//chipper
+					pd.put("oo_"+vo[b1],s);
+				}
+			}
+   
+			if (tm>0) {
+				logs.grava("ajp13","restou="+tm);
+				b1 = i.read(bf,0,tm);
+				logs.grava("ajp13","resto t="+b1+" = "+(new String(bf,0,b1)));
+				for (int i=0;i<b1;i++) {
+					logs.grava("ajp13",i+"="+(bf[i]*1));
+				}
+			}
+   
+			//le o fim 255
+			b1 = i.readUnsignedByte();
+			if (b1!=255) {
+				logs.grava("ajp13","fim <> 255="+(b1*1));
+			}
+   
+			//logs.grava("ajp13v",""+pd);
+
+		} catch (IOException ioe) {
+			logs.grava("lendo Pedido, ln lidas=<br>sp="+sp+"<br>ped="+pd);
+			erro = true;
+			geto = "ERRO LENDO PEDIDO!!";
+		}
+  
+		if (debugp) {
+			logs.grava(""+pd);
+		}
+
+	}
+	//********************************
+	protected String lePedidoString() {
+		return lePedidoString(-1);
+	}
+	//********************************
+	protected String lePedidoString(int b1) {
+		try {
+			if (b1==-1) {
+				b1 = i.readShort();
+				tm -= 2;
+			}
+			if (b1==-1) {
+				b1 = 0;
+			} else {
+				int b2 = i.read(bf,0,b1+1);
+				tm -= b2;
+			}
+			//logs.grava("ajp13v",new String(bf,0,b1));
+			return new String(bf,0,b1);
+		} catch (IOException ioe) {
+			logs.grava("ajp13","lendo String, falta="+tm+" sp="+sp+" ped="+pd);
+			erro = true;
+			geto = "ERRO LENDO PEDIDO!!";
+		}
+		return null;
+	}
+	//********************************
+	//atende pedido
+	protected void abreStream() {
+		//super.abreStream();
+		if (vrh==null) {
+			vrh = new Hashtable();
+			for (int i=0;i<vr.length;i++) {
+				vrh.put(vr[i],""+i);
+			}
+		}
+		//logs.grava("Abrindo stream ajp13");
+		try {
+			sp.setSoLinger( true, 100);
+			sp.setTcpNoDelay( true );
+			//i = new DataInputStream(sp.getInputStream());
+			i = new Leitor13(sp.getInputStream());
+			o = new GravadorAjp13(sp.getOutputStream());
+			//##sun
+			//sp.setSoTimeout(500);
+			o.setParam(vrh);
+			super.o = o;
+		} catch( final IOException ioe ) {
+			logs.grava("ajp13",ioe+", Abrindo Stream ajp13="+sp);
+			erro = true;
+		}
+	}
+
+	//********************************
+	//atende pedido
+	protected void lePost() {
+		String tipo = (String)pd.get("content-type");
+		int nr, tml=0,
+			tmt = Integer.parseInt((String)pd.get("content-length"));
+		multiPart = tipo.substring(0,10).equals("multipart/");
+
+		if (multiPart) {
+			//if (!o.pedePost(tbf)) {
+			//	logs.grava("ajp13","Erro pedindo POST!!"+tmt);
+			//}
+			i.restaPost = tmt;
+			i.ht = this;
+			pedido.io = i;
+			LeitorMP l = new LeitorMP(pedido);
+			if (!l.setPedido()) {
+				logs.grava("ajp13","ERRO MultiPart tmt="+tmt);
+			}
+			return;
+		}
+
+		//logs.grava("ajp13","vai ler POST="+tmt);
+		String ln1="";
+		int i1,i2,i3;
+
+		try {
+			while (tml < tmt) {
+
+				//envia pedido serv.
+				if (!o.pedePost(tbf)) {
+					logs.grava("ajp13","Erro pedindo POST!!"+tmt);
+					break;
+				}
+
+				//le pedido
+				if ((i1 = i.readShort())!=4660) {
+					logs.grava("ajp13","lePost: i1 != 4660");
+				}
+				i2 = i.readShort();
+				i3 = i.readShort();
+				if (i2-i3!=2) {
+					logs.grava("ajp13"," 1="+i1+" - 2="+i2+" != 2");
+				}
+    
+				//le pedido...
+				while (i3>0) {
+					nr = i.read(bf,0,i3>tbf?tbf:i3); //((tmt+lx>tbf) ? tbf : tmt+lx));
+					i3 -= nr;
+
+					if (nr>0) {
+						tml += nr;
+						ln1 += new String(bf,0,nr);
+					} else {
+						logs.grava("ajp13","POST fim inesperado falta="+tmt+" leu="+nr);
+						tml = tmt;
+					}
+				}
+			}
+			if (tmt!=ln1.length()) {
+				logs.grava("ajp13","tam lido="+ln1.length()+" difere de "+tmt);
+			}
+			pedido.setPost(ln1);
+
+		} catch (Exception e) {
+			erro = true;
+			logs.grava(e,"erro lendo "+tmt+" POST=","ajp13");
+		}
+
+	}
+
+}

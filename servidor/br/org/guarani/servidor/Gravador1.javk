@@ -1,0 +1,60 @@
+package br.nom.signey.guarani;
+
+
+import java.io.*;
+import java.net.*;
+
+//class Gravador extends PrintWriter {
+class Gravador {
+ private OutputStream out;
+ boolean erro = false;
+ public Gravador(OutputStream o) {
+  //super(o, true);
+  out = o;
+ }
+ public void print(String a) {
+  try {
+   for (int i=0;i<a.length();i++) {
+    out.write((byte)a.charAt(i));
+   }
+  } catch (Exception e) {
+   erro = true;
+  }
+ }
+ public void println() {
+  print("\r\n");
+ }
+ public void println(String a) {
+  print(a+"\r\n");
+ }
+ public void close() {
+  try {
+   out.close();
+  } catch (Exception e) {
+   erro = true;
+  }
+ }
+ public boolean checkError() {
+  return erro;
+ }
+ public void flush() {
+  try {
+   out.flush();
+  } catch (Exception e) {
+   erro = true;
+  }
+ }
+ public OutputStream getOut() {
+  return out;
+ }
+ public PrintWriter getPrintWriter() {
+  try {
+   return new PrintWriter(out);
+  } catch (Exception e) {
+   erro = true;
+  }
+  return null;
+ }
+
+
+}

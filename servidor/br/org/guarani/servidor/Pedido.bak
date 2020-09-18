@@ -1,0 +1,417 @@
+/*
+ * Signey John jan/2001.
+ */
+
+package br.nom.signey.guarani;
+
+import javax.servlet.*;
+import br.nom.signey.util.*;
+import java.util.*;
+import java.net.*;
+import java.io.*;
+
+public class Pedido {
+ int ant;
+ private Socket sk;
+ private OutputStream os;
+ public boolean msie=true;
+ public String browser;
+ public long tin=0;
+ public Gravador out;
+ public String cab=null;
+ protected int nBytes;
+ protected int forcaErro=0;
+ public Usuario us;
+ protected Hashtable ped;
+ protected boolean segura = false;
+
+ protected httpSessao sessao;
+ private Hashtable h = new Hashtable();
+ public Hashtable cook = new Hashtable();
+ public boolean erro = false;
+ public boolean proxy = false;
+
+ //validacao
+ protected static String valok=null; //valid carregada?
+ protected static String val,valL; //string nova janela
+ protected static String val1; //string abre nova janela
+ protected static int valnv; //nro tentativas de chamar nova janela
+ protected static int valt; //tempo revalidacao sem cookie
+ protected static int valtc; //tempo revalidacao com cookie
+ protected static int valresp; //tempo espera resposta validador
+ protected static FileOutputStream logVal;
+
+ //servlet
+ public Hashtable servletP;
+ public String queryString;
+ public ServletInputStream io=null;
+
+ //**************************************/
+ public String toString() {
+ 	return us.nome+" "+sk;
+ }
+ 
+ //**************************************/
+ public boolean addCab(String s) {
+  if (cab==null) {
+   return false;
+  } else {
+   cab += s+"\r\n";
+   return true;
+  }
+ }
+
+ //**************************************/
+ public boolean setMime(String mime) {
+  if (cab==null) {
+   return false;
+  } else {
+   cab = str.troca(cab,Guarani.tipos.getTipo(".html"),mime);
+   return true;
+  }
+ }
+ 
+ //**************************************/
+ public boolean setTxt() {
+  return setMime(Guarani.tipos.getTipo(".txt"));
+ }
+
+ private long teste_erro=0;
+
+ //**************************************/
+ //inicializa
+ public String[] executa(String s) {
+  executa e = new executa();
+  e.exec(this,s);
+  return new String[] {e.getOut(),e.getErr()};
+ }
+ 
+ //**************************************/
+ public Hashtable getPedidoCab() {
+  return ped;
+ }
+
+ public Hashtable getParametros() {
+  return h;
+ }
+
+
+ //**************************************/
+ //inicializa
+ public Pedido(Hashtable pd) {
+  ped = pd;
+		cook = new Hashtable();
+  String c = (String)ped.get("cookie");
+  if (c!=null) {
+   String v[] = str.palavraA(c,";");
+   for (int i=0;i<v.length;i++) {
+   	logs.grava("cook="+v[i]);
+    cook.put(str.leftAt(v[i],"="),str.substrAt(v[i],"="));
+   }
+  }
+
+  // user-agent=Mozilla/4.0 (compatible; MSIE 4.01
+  browser = (String)ped.get("user-agent");
+  //limita velocidade output msie
+  tin = data.ms();
+  if (browser!=null) {
+   msie = browser.indexOf("MSIE")!=-1;
+  }
+  
+  //via proxy
+  if (ped.get("via")!=null) {
+   proxy = true;
+  }
+
+  //cfg static
+  if (valok==null) {
+   valok = "ok";
+   val = Guarani.getCfg("validacao");
+   valL = Guarani.getCfg("validacaoL");
+   val1 = Guarani.getCfg("validacao1");
+   valnv = Integer.parseInt(Guarani.getCfg("validacaon","2"));
+   valt = Integer.parseInt(Guarani.getCfg("validacaot","30000"));
+   valtc = Integer.parseInt(Guarani.getCfg("validacaotc","240000"));
+   valresp = Integer.parseInt(Guarani.getCfg("validacaoresp","1000"));
+   logVal = logs.getOut("val");
+  }
+  teste_erro = data.ms();
+ }
+
+ //**************************************/
+ //valida via nt com iframe embutido na página
+ //funciona só com iexplorer ms
+ //sem opção para
+ public boolean valNT() {
+  boolean cooknovo = false, r = false;
+
+  if (val==null) {
+   us.nome=null;
+   return true;
+  }
+  String sVal;
+
+  //verifica cookie, se o cabeçalho de resposta
+  // do pedido não foi enviado ainda.
+  String ck = (String)cook.get("ip");
+  if (cab!=null) {
+   //gcc## if (ck==null | us.cookie==null | (""+ck).compareTo(""+us.cookie)!=0) {
+   boolean nv = (ck==null | us.cookie==null);
+   if (!nv) nv = ck.compareTo(us.cookie)!=0;
+   if (nv) {
+    logs.gravaStream(logVal,us.ip+", NOVO COOKIE!! cli="+ck+" serv="+us.cookie);
+    us.cookie = ""+(new Random().nextLong());
+    cab += "Set-Cookie: ip="+us.cookie+"\r\n";
+    Guarani.Usuarios.invalidaUsu(sk);
+    cooknovo = true;
+   }
+  }
+
+  //tempo excedeu?
+  //falta - ver se data não é futura = acerto de hora no servidor....
+  if (us.hora>System.currentTimeMillis()) {
+   logs.grava("val","hora futura!!"+us.hora+">"+System.currentTimeMillis());
+   us.hora = System.currentTimeMillis() - (valt*2 + valtc);
+  }
+
+  if (us.browser.indexOf("MSIE")==-1) {
+   sVal = valL;
+  } else {
+  	sVal = val;
+  }
+
+  us.tm=System.currentTimeMillis()-us.hora;
+  us.nvnt=0;
+  while (us.nvnt<valnv & (us.nome.length()<1 | us.tm>((cooknovo) ? valt : valtc) )) {
+
+   logs.gravaStream(logVal,"validando "+us.nvnt+": "+us.ip);
+
+   if (us.nvnt==0) {
+    us.nome = "";
+    on(str.troca(sVal,"@SEGS@",""+data.ms()));
+    flush();
+   }
+   on("<script></script><!=============================================================================>\r\n\r\n");
+   on("");
+   on(val1);
+   on("<script></script><!=============================================================================>\r\n\r\n");
+   on("");
+   on("<script></script><!=============================================================================>\r\n\r\n");
+   on("");
+   //try {Thread.sleep(valresp+valresp*us.nvnt*3);} catch (InterruptedException ie) {
+   try {Thread.sleep(valresp);} catch (InterruptedException ie) {
+    logs.gravaStream(logVal,"ERRO sleep: "+ie);
+   }
+   getUsu();
+   us.tm=System.currentTimeMillis()-us.hora;
+   us.nvnt++;
+  }
+
+  //erro - retornava erro mesmo com tempo de dias set/2001:
+  //return ( us.nome.length()>0 & us.nvnt<=valnv );
+  r = ( us.nome.length()>0 & us.tm<((cooknovo) ? valt : valtc) );
+  if (!r) {
+  	us.hora = 0;
+  }
+  return r;
+
+ }
+
+ //**************************************/
+ public void setCab(String s) {
+  cab = s;
+ }
+
+ //**************************************/
+ public void setOut(Gravador p,Socket s) {
+  sk = s;
+  out = p;
+  nBytes = 0;
+  getUsu();
+ }
+
+ //**************************************/
+ public Usuario getUsu() {
+  us = Guarani.Usuarios.getUsu(sk);
+  us.browser = browser;
+  return us;
+ }
+
+ //**************************************/
+ public PrintWriter getOut() {
+  return out;
+ }
+
+ //**************************************/
+ public OutputStream getOutputStream() {
+  try {
+   os = sk.getOutputStream();
+  } catch (IOException ioe) {
+   logs.grava("ERRO getOutputStream: "+ioe);
+  }
+  return os;
+ }
+
+ //**************************************/
+ public void resetGet() {
+  //h = new StrVetor();
+  h = new Hashtable();
+ }
+
+ //**************************************/
+ public void setGet(String a) {
+  a = str.trimm(a);
+  queryString = a;
+  String b[] = str.palavraA(a,"&");
+  for (int i=0;i<b.length;i++) {
+   h.put(str.leftAt(b[i],"="),str.substrAt(b[i],"="));
+  }
+ }
+ //**************************************/
+ public void setPost(String a) {
+  a = str.trimm(a);
+  String b[] = str.palavraA(a,"&");
+  for (int i=0;i<b.length;i++) {
+   h.put(str.UnEscape(str.leftAt(b[i],"=")),str.UnEscape(str.substrAt(b[i],"=")));
+  }
+ }
+
+ /*/**************************************
+ public StrVetor getParam() {
+  return h;
+ }
+ */
+
+
+ //**************************************/
+ public String getString(String a) {
+  return (String)(h.get(a));
+ }
+
+ //**************************************/
+ public String getString(String a,String b) {
+  return str.seNull(getString(a),b);
+ }
+ //**************************************/
+ public void flush() {
+ 	try {
+   out.flush();
+  } catch (Exception e) {
+   logs.grava("task","Erro flush!!=="+sk);
+  }
+ }
+
+ //**************************************/
+ public boolean testaErro() {
+  long t = System.currentTimeMillis();
+  if (!erro && t-teste_erro>1000) {
+   teste_erro = t;
+   //logs.grava("task","testando ERRO!!");
+   flush();
+   erro = out.checkError();
+   if (erro) {;
+    logs.grava("task","CLIENTE sok="+sk);
+   }
+  }
+  return erro;
+ }
+
+
+ //**************************************/
+ public boolean println(String a) {
+  return print(a+"\r\n");
+ }
+
+ //**************************************/
+ public boolean o(String a) {
+  return print(a);
+ }
+
+ //**************************************/
+ public boolean on(String a) {
+  return println(a);
+ }
+
+ //**************************************/
+ public long getBytes() {
+  return nBytes;
+ }
+
+ //**************************************/
+ public void erro(String s) {
+  erro(s,new Exception());
+ }
+
+ //**************************************/
+ public void erro(String s,Exception e) {
+  String stv[],a,st;
+  st = "ns.nome=<b>"+us.nome+"</b> ip=<b>"+us.ip+"</b><br>";
+  st += "BROWSER: <b>"+browser+"</b><br>";
+  stv = str.erroA(new Exception());
+  st += "ERRO: <font color=blue>"+s+"</font><br>";
+  if (stv.length>2) {
+   st += "DETECTADO EM: <font color=blue>"+stv[2]+"</font><br>";
+  }
+  stv = str.erroA(e);
+  if (!stv[0].equals(""+e)) {
+   st += "<font color=red>"+e+"</font><br>";
+  }
+  int ni=0;
+  for (int i=0;i<stv.length;i++) {
+  	a = str.leftAt(str.trimm(stv[i])," ");
+  	if (!a.equals("at")) {
+   	st += "<font color=red><b>"+stv[i]+"</b></font><br>";
+  	} else {
+  		if (ni==0) {
+   	st += "<font color=blue><b>"+stv[i]+"</b></font><br>";
+  		} else {
+    	st += stv[i]+"<br>";
+    }
+    ni++;
+   }
+  }
+  logs.grava("err",st);
+  on("\"</center></table></b></div><pre></pre><hr>"+st);
+  erro = true;
+ }
+
+ //**************************************/
+ public boolean print(String a) {
+  if (cab!=null) {
+  	//logs.grava("cabec="+str.troca(cab,"\r\n","<br>="));
+   out.println(cab);
+   nBytes += cab.length();
+   //logs.gravaStream1(db,cab+"\r\n");
+   //flush();
+   //logs.grava(cab);
+   cab = null;
+  }
+ 	//logs.grava("=t="+a.length()+"\r\n("+a+")e="+erro);
+  if (!erro) {
+   out.print(a);
+   //logs.gravaStream1(db,a);
+   nBytes += a.length();
+   if (nBytes/2048!=ant ) {
+   	ant = nBytes/2048;
+   	flush();
+   } else {
+    testaErro();
+   }
+  }
+
+  if (msie) {
+  	//limitar velocidade...
+  	long t = data.ms()-tin, b = nBytes/t, bm = 20;
+	 	//logs.grava("mun","t="+t+" b="+b);
+  	if (b>bm) { //bytes por mili segundos
+  	 try {
+  	 	long e = nBytes/bm - t;
+  	 	//logs.grava("mun","t="+t+" b="+b+" e="+e);
+  	 	Thread.sleep(e);
+  	 } catch (Exception e) {
+  	 }
+  	}
+  }
+  return true;
+ }
+}
