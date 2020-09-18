@@ -1,0 +1,14 @@
+Description=guarani
+After=syslog.target network.target
+
+[Service]
+Type=oneshot
+PrivateTmp=false
+ExecStart=/home/signey/prg/bin/guarani-service.sh start
+ExecStop=/home/signey/prg/bin/guarani-service.sh stop
+#ExecReload=/bin/kill -HUP $MAINPID
+#KillSignal=SIGINT
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target
