@@ -62,7 +62,6 @@ public class Https extends Http {
 	//********************************
 	//retorna serversocket
 	public ServerSocket criaServerSocket(int porta) throws IOException {
-		https = true;
 		//SSLSocketFactory ssl = new SSLSocketFactory();
 		//ssl.setCfg(cnf);
 		//return ssl.createSocket(porta);
@@ -181,5 +180,8 @@ public class Https extends Http {
 			throw new IOException( "Exception trying to load keystore " + keyFile + ": " + ex.getMessage() ); 
 
 		}
+	}
+	public Https() {
+		https = true;
 	}
 }

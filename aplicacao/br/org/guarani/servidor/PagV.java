@@ -41,14 +41,20 @@ public class PagV extends Pag {
 	//*****************************************//
 	private final boolean validaX509() {
 		X509Certificate x509 = ped.getCliCert();		
-		if (x509==null) return false;
+		if (x509==null) {
+			logs.grava("x509","pedido não retornou cert, usuário sem cert?");
+			return false;
+		}
 		String a = x509.getSubjectDN().getName();
 		usu = str.substrAtAt(a,"CN=",",");		
 		Object o = Usuario.get(ped.getSessao().getId(),usu);
-		usuario = sessao.getUsuario();
+		usuario = (br.org.guarani.bd.usuario)o;//sessao.getUsuario();
 		if (usuario==null) {
+			logs.grava("x509","usuario="+usu+"= não validado class Usuario");
 			usu = "?";
-		} 
+			return false;
+		}
+		usuario.valida();
 		return true;
 	}
 	//*****************************************//
@@ -264,7 +270,8 @@ public class PagV extends Pag {
 				rodap();
 				usuario.invalida();
 				return false;
-			} if (usuario==null || !usuario.valido()) {
+			} 
+			if (usuario==null || !usuario.valido()) {
 				//logs.grava("usuario="+usuario);
 				if (ped.x509Val()) {
 					validaX509();

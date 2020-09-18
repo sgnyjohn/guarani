@@ -81,6 +81,7 @@ public class Pedido {
 	//}
 	//*************************************************
 	public boolean x509Val() {
+		//logs.grava("x509","https="+(prot.https?"sim":"nao")+" val509 ("+prot.cnf.get("keyNeedClientAuth")+")");
 		return prot.https && "true".equals(""+prot.cnf.get("keyNeedClientAuth"));
 	}		
 	//***********************************
