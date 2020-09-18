@@ -9,6 +9,8 @@ import java.io.*;
 import br.org.guarani.servidor.*;
 import br.org.guarani.util.*;
 
+import java.security.cert.X509Certificate;
+
 //*****************************************//
 //*****************************************//
 public class PagV extends Pag {
@@ -35,6 +37,19 @@ public class PagV extends Pag {
 	public void js() {
 		super.js();
 		script("_sis.usu='"+usu+"';");
+	}
+	//*****************************************//
+	private final boolean validaX509() {
+		X509Certificate x509 = ped.getCliCert();		
+		if (x509==null) return false;
+		String a = x509.getSubjectDN().getName();
+		usu = str.substrAtAt(a,"CN=",",");		
+		Object o = Usuario.get(ped.getSessao().getId(),usu);
+		usuario = sessao.getUsuario();
+		if (usuario==null) {
+			usu = "?";
+		} 
+		return true;
 	}
 	//*****************************************//
 	private final boolean valida() {
@@ -251,7 +266,9 @@ public class PagV extends Pag {
 				return false;
 			} if (usuario==null || !usuario.valido()) {
 				//logs.grava("usuario="+usuario);
-				if (valida()) {
+				if (ped.x509Val()) {
+					validaX509();
+				} else if (valida()) {
 					//pedido val aceita e será executada...
 					return false;
 				} else {

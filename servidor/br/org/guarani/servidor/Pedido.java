@@ -79,6 +79,10 @@ public class Pedido {
 	//public int write(byte[] b,int pi,int tm) {
 	//	return out.write(b,pi,tm);
 	//}
+	//*************************************************
+	public boolean x509Val() {
+		return prot.https && "true".equals(""+prot.cnf.get("keyNeedClientAuth"));
+	}		
 	//***********************************
 	public String dirRoot() {
 		return prot.dirRoot();

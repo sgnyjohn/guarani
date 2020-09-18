@@ -53,6 +53,7 @@ class Http extends ProtocoloAbstrato {
 	String dirIgnora[],dirClasse[][];
 	
 	boolean getIsDir = false;
+	boolean https = false;
 	//*************************************************
 	public String detalhePedido() {
 		return pedido.toString();

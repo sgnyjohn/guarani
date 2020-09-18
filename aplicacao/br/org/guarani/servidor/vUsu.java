@@ -20,8 +20,6 @@ import pwwws.*;
 import br.org.guarani.loader.op;
 import br.org.guarani.loader.opcaoC;
 
-import java.security.cert.X509Certificate;
-
 
 //***********************************
 //***********************************
@@ -34,7 +32,6 @@ public class vUsu implements Prg {
 	//protected String us,tipo,ip,sesO,resp,ender,referer;
 	protected String referer;
 	
-	//private X509Certificate x509;
 	
 	/***********************************
 	public boolean desligar() {
@@ -46,17 +43,7 @@ public class vUsu implements Prg {
 		;
 	}
 	*/
-	//***********************************
-	public String getX509user() {
-		//if (x509==null) {
-			//certificado?
-			X509Certificate x509 = ped.getCliCert();		
-		//}
-		if (x509==null) return null;
-		String a = x509.getSubjectDN().getName();
-		//CN=signey, OU=escritorio, O=casa, L=porto alegre, ST=rs, C=br
-		return str.substrAtAt(a,"CN=",",");
-	}
+
 	//***********************************
 	public vUsu() {
 		if (opC==null) {
@@ -253,40 +240,27 @@ public class vUsu implements Prg {
 	}
 	//###########################################
 	boolean verif(String us,String sn) {
-		boolean x5 = false;
-		if (sn==null) {
-			String u = getX509user();
-			if (u!=null && us.equals(u)) {
-				x5 = true;
-			}
-		}
 		////////////////////////////////////////////////////
 		//verifica senha
-		if (x5) {
-			//us = getX509user();
-		} else {
-			us = str.trimm(us);
-		}
+		us = str.trimm(us);
 		Object o = Usuario.get(ped.getSessao().getId(),us);
 		//ogs.grava("cl="+o.getClass().getName());
 		usuario u = (usuario)o;
-		if (!x5) {
-			//seta funcao SQL de armazenamento pass
-			Object fp = ped.getHttpConf("funcSQLPassword");
-			//logs.grava("funcSQLPassword"+fp);
-			if (fp!=null) {
-				u.tpPass = ""+fp;
-			}
-			sn = str.trimm(sn);
-			if (u==null || us.charAt(0)=='~' || !u.validaSenha(ped,sn)) {
-				logs.grava("logon","LogON ERRO: usu="+us+" "+ped.ip+" "+ped.getString("usu"));
-				ped.on("<script>"
-					+"alert('Usuário e/ou senha Inválido');"
-					+"</script>"
-				);
-				tela(validaform());
-				return true;
-			}
+		//seta funcao SQL de armazenamento pass
+		Object fp = ped.getHttpConf("funcSQLPassword");
+		//logs.grava("funcSQLPassword"+fp);
+		if (fp!=null) {
+			u.tpPass = ""+fp;
+		}
+		sn = str.trimm(sn);
+		if (u==null || us.charAt(0)=='~' || !u.validaSenha(ped,sn)) {
+			logs.grava("logon","LogON ERRO: usu="+us+" "+ped.ip+" "+ped.getString("usu"));
+			ped.on("<script>"
+				+"alert('Usuário e/ou senha Inválido');"
+				+"</script>"
+			);
+			tela(validaform());
+			return true;
 		}
 
 		logs.grava("logon","LogON OK: usu="+us+" "+ped.ip+" "+ped.getString("usu"));

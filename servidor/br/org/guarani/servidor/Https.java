@@ -62,6 +62,7 @@ public class Https extends Http {
 	//********************************
 	//retorna serversocket
 	public ServerSocket criaServerSocket(int porta) throws IOException {
+		https = true;
 		//SSLSocketFactory ssl = new SSLSocketFactory();
 		//ssl.setCfg(cnf);
 		//return ssl.createSocket(porta);
