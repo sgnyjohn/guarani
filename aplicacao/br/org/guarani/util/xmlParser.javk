@@ -1,0 +1,241 @@
+package br.org.guarani.util;
+
+import java.io.*;
+import java.util.*;
+
+import br.org.guarani.servidor.*;
+
+//***************************************
+//***************************************
+public class xmlParser {
+	String fila[] = new String[30];
+	InputStream hi;
+	//char c,ca,bf[] = new char[1];
+	byte c,ca,bf[] = new byte[1],tpA;
+	//tamanho buff
+	public int atrBufT = 200;
+	public int texBufT = 16000;
+	buf atrBuf,texBuf;
+	boolean sob = false;
+	xmlTag tgU;
+	boolean sobT = false;
+	public Hashtable hErr = new Hashtable();
+	//***************************************
+	public xmlParser(InputStream i) {
+		hi = i;
+	}
+	//***************************************
+	public xmlParser(String aq) {
+		File f = new File(aq);
+		try {
+			//hi = new BufferedReader(new FileReader(aq),4096);
+			hi = (InputStream)(new FileInputStream(f));
+		} catch (Exception e) {
+			return;
+		}
+	}
+	//***************************************
+	public xmlTag parse() {
+		xmlTag x = new xmlTag();
+		atrBuf = new buf(atrBufT);
+		texBuf = new buf(texBufT);
+		return x;
+	}
+	//***************************************
+	private void erro(String er) {
+		hErr.put(""+hErr.size(),er);
+	}
+	//***************************************
+	private void parse(xmlTag tgNA,int nvg) {
+		xmlTag tg,tgAn=null;
+		int nv=0;
+		while ((tg=tagI())!=null) {
+			//on("<hr>"+nv+" "+nvg+" "+tg.nome+" "+tg.tex+" "+tg.atr);
+			//logs.grava("tag="+tg.nome);
+			if (tg.nome.charAt(0)=='/') {  //fim de tag?
+				nv--;
+				if (nv<0) {
+					//devolve tag
+					sobT = true;
+					break;
+				}
+				if (tgAn==null) {
+					erro("esperada tag de inicio e não '"+tg.nome+"'");
+				} else if (!tg.nome.equals("/"+tgAn.nome)) {
+					erro("esperada tag '/"+tgAn.nome+"' <> de '"+tg.nome+"'");
+				}
+			} else if (tg.tex==null && tg.nome.charAt(0)!='!') {
+				nv++;
+				tg.tex = tex();
+				tgNA.put(tg);
+				parse(tg,nvg+1);
+			} else {
+				//tag auto term e ??pode ter texto??
+				tg.tex = tex();
+				tgNA.put(tg);
+			}
+			tgAn = tg;
+		}
+	}
+	//***************************************
+	public void debug(Pedido ped) {
+		xmlTag tg;
+		int nv=0;
+		while ((tg=tagI())!=null) {
+			ped.on("<hr>"+nv+" "+tg.nome+" "+tg.tex+" "+tg.atr);
+			if (tg.nome.charAt(0)=='/') {
+				nv--;
+			} else if (tg.tex==null && tg.nome.charAt(0)!='!') {
+				tg.tex = tex();
+				nv++;
+			} else { //? auto terminada pode ter texto....?
+				tg.tex = tex();
+			}
+		}
+		ped.on("<hr>FIM Nível: "+nv);
+	}
+	//***************************************
+	private String tex() {
+		texBuf.pos = 0;
+		while(leC()==1 && (c!='<' && ca!='\\')) {
+			texBuf.add(c);
+		}
+		if (c=='<') {
+			sob = true;
+		}
+		return texBuf.toString();
+	}
+	//***************************************
+	private xmlTag tagI() {
+		if (sobT) {
+			sobT = false;
+			return tgU;
+		}
+		while(leC()==1 && c!='<') {
+			if (!br()) {
+				logs.grava("esperando < e veio "+((char)c));
+				return null;
+			}
+		}
+		if (c!='<') {
+			return null;
+		}
+		int s = 0; //nome tag
+		//1=esp atr
+		//2=nome atr
+		//3=vlr atr
+		//4="
+		//5= fim "
+		String nome="",nomea=null,va=null;
+		xmlTag tg = new xmlTag();
+		while (leC()==1) {
+			if (s==0) { //nome tag
+				if (c=='>') {
+					tg.nome = nome;
+					break;
+				} else if (c=='/' || (nome.length()>0 && nome.charAt(0)=='?' && c=='?') ) {
+					leC();
+					if (c=='>') {
+						tg.nome = nome;
+						tg.tex = "";
+						break;
+					} else {
+						//nome=""+ca;
+						nome = ""+((char)ca); //new String(ca);
+						sob = true;
+					}
+				} else if (!br()) {
+					//nome += c;
+					nome += ((char)c);
+				} else {
+					tg.nome = nome;
+					s=1;
+				}
+			} else if (s==1) { //ini nome atr ou fim tag
+				if (br()) {
+				} else if (c=='>') {
+					break;
+				} else if (c=='/' || (nome.charAt(0)=='?' && c=='?') ) {
+					leC();
+					if (c=='>') {
+						tg.tex = "";
+						break;
+					} else {
+						//nomea=""+ca;
+						nomea=""+((char)ca);
+						sob = true;
+						s = 2;
+					}
+				} else {
+					nomea=""+((char)c);
+					s = 2;
+				}
+			} else if (s==2) { //nome atr
+				if (br() || c=='=') {
+					va = "";
+					s = 3;
+				} else {
+					nomea += ((char)c);
+				}
+			} else if (s==3) { //" ini
+				if (br()) {
+				} else if (c=='"' || c=='\'') {
+					tpA = c;
+					s = 4;
+				} else {
+				}
+			} else if (s==4) { //" fim
+				if (c==tpA) {
+					s = 1;
+					tg.put(nomea,va);
+				} else {
+					//va += c;
+					va += (char)c;
+				}
+			}
+			
+		}
+		tgU = tg;
+		return tg;
+	}
+	//***************************************
+	private boolean br() {
+		return c==' ' || c=='\t' || c=='\n' || c=='\r';
+	}
+	//***************************************
+	private int leC() {
+		if (sob) {
+			sob = false;
+			return 1;
+		}
+		int r = 0;
+		ca = c;
+		try {
+			r = hi.read(bf,0,1);
+			c = bf[0];
+		} catch (Exception e) {
+		}
+		return r;
+	}
+	//***************************************
+	public class buf {
+		byte b[];
+		int t,pos;
+		//***************************************
+		public String toString() {
+			return new String(b,0,pos);
+		}
+		//***************************************
+		public void add(byte by) {
+			if (pos>=t) {
+			} else {
+				b[pos++] = by;
+			}
+		}
+		//***************************************
+		public buf(int tam) {
+			t = tam;
+			b = new byte[tam];
+		}
+	}
+}

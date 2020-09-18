@@ -1,0 +1,72 @@
+package br.org.guarani.loader;
+
+import java.util.*;
+import java.io.*;
+
+
+//***************************
+//***************************
+public class shL {
+	public String ar,sh;
+	String ln = so.linux()?"\n":"\r\n";
+	Pedido ped;
+	executa e;
+	public boolean debug = false;
+	//***************************
+	public shL() {
+		sh = "";
+		try {
+			ar = File.createTempFile("ssh",(so.linux()?".sh":".bat"))
+				.toString();
+		} catch (Exception e) {
+		}
+	}
+	//***************************
+	public void cmd(String cmd) {
+		if (load.linux) {
+			sh += cmd+ln;
+		} else {
+			//converte para acentuação DOSe
+			sh += str.toDos(cmd)+ln;
+		}
+	}
+	//***************************
+	public String exec(boolean segundo) {
+		if (!load.linux) {
+			sh = "set PATH="+so.dirPrg()+"\\bin;%PATH%"+ln+sh;
+		} else if (!debug) {
+			cmd("rm -f $0");
+		}
+		//grava shell
+		arquivo arq = new arquivo(ar);
+		arq.gravaTxt(sh);
+		e = new executa();
+		String r;
+		if (segundo) {
+			e.execBack(ped,(so.linux()?"sh ":"")+ar);
+			r = "execução segundo plano!!";
+		} else {
+			e.exec(ped,(so.linux()?"sh ":"")+ar);
+			r = e.getOut();
+		}
+		//elimina sh?
+		if (!load.linux && !debug) {
+			try { Thread.sleep(2000); } catch (Exception e) {};
+			arq.f.delete();
+		}
+		return r;
+	}
+	//***************************
+	public String getOut() {
+		return e.getOut();
+	}
+	//***************************
+	public String getHtml() {
+		return e.getHtml();
+	}
+	//***************************
+	public String exec() {
+		return exec(false);
+	}
+}
+

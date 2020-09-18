@@ -1,0 +1,156 @@
+package br.org.guarani.util;
+
+import java.io.*;
+import java.util.*;
+
+import br.org.guarani.servidor.*;
+
+//***************************************
+//***************************************
+public class htmlParser extends xmlParser {
+	public Hashtable tagsSemFim = new Hashtable();
+	Hashtable tagPilha = new Hashtable();
+	public Pag pg;
+	String tbH = "table-/table-tbody-/tbody-tr-/tr-td-/td";
+	//***************************************
+	void empil(xmlTag t) {
+		//if (t.name.charAt(0)=='/') {
+		int s = tagPilha.size();
+		if (s>0) {
+			//proibe procurar tex...
+			t.tex = "";
+			t.texF = "";
+		}
+		tagPilha.put(""+s,t);
+		pg.on("<br>emp"+s+"="+t.nome);
+	}
+	//***************************************
+	xmlTag tagI() {
+		//devolvida
+		if (sobT) {
+			sobT = false;
+			return tgU;
+		}
+		//empilhada
+		int t = tagPilha.size();
+		if (t>0) {
+			tgU = (xmlTag) tagPilha.get(""+(t-1));
+			pg.on("<br>dEmp="+tgU.nome);
+			tagPilha.remove(""+(t-1));
+			return tgU;
+		}
+		
+		//le outra
+		tgU = super.tagI();
+		if (tgU.nome!=null) {
+			if (tbH.indexOf(tgU.nome)!=-1) {
+			}
+		}
+		return tgU;
+	}
+	//***************************************
+	xmlTag parse(xmlTag tgNA,int nvg) {
+		xmlTag tg,tgAn=null;
+		int nv=0;
+		while ((tg=tagI())!=null) {
+			//on("<hr>"+nv+" "+nvg+" "+tg.nome+" "+tg.tex+" "+tg.atr);
+			//logs.grava("tag="+tg.nome);
+			
+			//auto terminado?
+			pg.on("<hr>nvA="+tgNA.nome
+				+(tgAn!=null?" ant="+tgAn.nome:"")
+				+" tg="+tg.nome
+			);
+			if (tagsSemFim.get(tg.nome)!=null) {
+				tg.tex = "";
+			} else if (tgNA.nome==null) {
+			} else if (tg.nome.equals("td")) {
+				if (tgNA.nome.equals("td")) {
+					empil(tg);
+					empil(new xmlTag("/td"));
+					return null;
+				}
+			} else if (tg.nome.equals("tr")) {
+				if (tgNA.nome.equals("td")) {
+					empil(tg);
+					empil(new xmlTag("/tr"));
+					empil(new xmlTag("/td"));
+					return null;
+				}
+			} else if (tg.nome.equals("/table")) {
+				if (tgNA.nome.equals("td")) {
+					empil(tg);
+					//empil(new xmlTag("/tbody"));
+					empil(new xmlTag("/tr"));
+					empil(new xmlTag("/td"));
+					return null;
+				}
+			}
+			
+			
+			//tag de fim?
+			if (tg.nome.charAt(0)=='/') {
+				//tag de fim pode ter texto
+				nv--;
+				if (nv<0) {
+					//devolve tag
+					sobT = true;
+					pg.on("<br>Sobrou...");
+					break;
+				}
+				if (tg.texF==null) {
+					tg.texF = tex();
+				}
+				if (tgAn==null) {
+					erro("esperada tag de inicio e não '"+tg.nome+"'");
+				} else if (!tg.nome.equals("/"+tgAn.nome)) {
+					erro("esperada tag '/"+tgAn.nome+"' <> de '"+tg.nome+"'");
+					int a = tbH.indexOf(tgAn.nome);
+					int b = tbH.indexOf(tg.nome.substring(1));
+					pg.on("<br>a="+a+" b="+b);
+					if (a>-1 && b>-1 && a>b) {
+						pg.on("<br>a="+a+" b="+b);
+						sobT = true;
+						return null;
+					}
+				} else {
+					tgAn.nv = nvg;
+				}
+			} else if (tg.tex==null && tg.nome.charAt(0)!='!') {
+				//tag de inicio
+				nv++;
+				tg.tex = str.trimm(tex());
+				tgNA.put(tg);
+				parse(tg,nvg+1);
+			} else {
+				//tag auto term e pode ter texto
+				tg.texF = tex();
+				tg.nv = nvg;
+				tgNA.put(tg);
+			}
+			tgAn = tg;
+		}
+		return null;
+	}
+	//***************************************
+	void erro(String s) {
+		pg.on("<br><font color=red>"+s+"</font>");
+		super.erro(s);
+	}
+	//***************************************
+	public htmlParser(InputStream i) {
+		hi = i;
+		fechar = false;
+	}
+	//***************************************
+	public htmlParser(String aq) {
+		this(new File(aq));
+	}
+	//***************************************
+	public htmlParser() {
+	}
+	//***************************************
+	public htmlParser(File f) {
+		this.f = f;
+	}
+}

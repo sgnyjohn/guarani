@@ -1,0 +1,97 @@
+/*
+		signey mai/2009
+*/
+package br.org.guarani.servidor;
+
+import java.io.*;
+import java.net.*;
+import br.org.guarani.util.*;
+
+//class GravadorHttp extends PrintWriter implements Gravador {
+public class GravadorArq extends Gravador {
+
+	//private OutputStream out;
+
+	//******************************
+	public void close() {
+		flush();
+		try {
+			out.close();
+		} catch (Exception e) {
+		}
+	}
+
+	//******************************
+	public void println() {
+		print("\r\n");
+	}
+
+	//******************************
+	public GravadorArq(OutputStream o) {
+		super(o, true);
+		out = o;
+		buf = new byte[tBuf];
+		pBuf = 0;
+	}
+	//******************************
+	public PrintWriter getPrintWriter() {
+		return this;
+	}
+	//******************************
+	public void flush() {
+		if (erro) return;
+		gravaBuf();
+		try {
+			out.flush();
+		} catch (Exception e) {
+			sErro = "erro:"+e;
+			erro = true;
+		}
+	}
+	//******************************
+	public void print(String s) {
+		//logs.grava("s.len="+s+" erro="+erro+" "+sErro);
+		if (erro) return;
+		int t = s.length();
+		for (int i=0;i<t;i++) {
+			buf[pBuf++] = (byte)s.charAt(i);
+			if (pBuf>=tBuf) {
+				gravaBuf();
+			}
+		}
+	}
+	//******************************
+	public boolean checkError() {
+		flush();
+		return erro;
+	}
+	//******************************
+	protected void gravaBuf() {
+		//ogs.grava("gravando "+pBuf+" tb="+tBuf);
+		if (pBuf==0 || erro) return;
+		try {
+			int t = pBuf;
+			pBuf = 0;
+			out.write(buf,0,t);
+		} catch (Exception e) {
+			erro = true;
+			sErro = "erro:"+e;
+		}	
+	}
+	//******************************
+	public void println(String s) {
+		print(s+"\r\n");
+	}
+	//******************************
+	public int write(byte b[],int in,int tm) {
+		if (erro) return -1;
+		int t = in+tm;
+		for (int i=in;i<t;i++) {
+			buf[pBuf++] = b[i];
+			if (pBuf>=tBuf) {
+				gravaBuf();
+			}
+		}
+		return tm;
+	}
+}

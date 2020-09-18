@@ -1,0 +1,714 @@
+package br.org.guarani.util;
+
+import java.io.*;
+import java.util.*;
+import java.text.*;
+
+//***************************************
+//***************************************
+public class xmlTag {
+	public String xDel = "x:";
+	public String nome;
+	public Hashtable atr=new Hashtable();
+	public Hashtable tg=new Hashtable();
+	public String tex,texF;
+	public int nv=-1,pos=0;
+	public boolean removida = false;
+	public xmlTag dd;
+	//***************************************
+	//ordena tags
+	public boolean sort(String atr,String ord) {
+		return sort(atr,ord!=null && ord.equals("desc"),0,size()-1);
+	}
+	//***************************************
+	//ordena tags
+	public boolean sort(String atr,boolean inverso,int lo0,int hi0) {
+		int lo = lo0;
+		int hi = hi0;
+		int at = 0;
+		try {
+		if ( hi0 > lo0) {
+			at = ( lo0 + hi0 ) / 2;
+			String v = get(at).getAtr(atr);
+			while( lo <= hi )    {
+				if (inverso) {
+					//while( lo<hi0 && v.maior(a[lo]) ) ++lo;
+					//while( hi>lo0 && v.menor(a[hi]) ) --hi;
+					while( lo<hi0 && v.compareTo(get(lo).getAtr(atr))<0 ) ++lo;
+					while( hi>lo0 && v.compareTo(get(hi).getAtr(atr))>0 ) --hi;
+				} else {
+					while( lo<hi0 && v.compareTo(get(lo).getAtr(atr))>0 ) ++lo;
+					while( hi>lo0 && v.compareTo(get(hi).getAtr(atr))<0 ) --hi;
+				}
+				if( lo <= hi ) {
+					//swap(a, lo, hi);
+					Object x = get(lo);
+					tg.put(""+lo,get(hi));
+					tg.put(""+hi,x);
+					++lo;
+					--hi;
+				}
+			}
+			if( lo0 < hi ) {
+				sort(atr, inverso, lo0, hi);
+			}
+			if( lo < hi0 ) {
+				sort(atr, inverso, lo, hi0);
+			}
+		}
+		} catch (Exception e) {
+			logs.grava(" at="+at+" lo="+lo+" hi="+hi+" lo0="+lo0+" hi0="+hi0+" size="+size()+" n="+nome);
+		}
+		return false;
+	}
+	//***************************************
+	//testa if de tags
+	public String Xformat(String s,String f) {
+		if (f==null) {
+			return s;
+		}
+		if (f.charAt(0)=='!') {
+			if (f.equals("!m")) {
+				s = s.toLowerCase();
+			} else	if (f.equals("!M")) {
+				s = s.toUpperCase();
+			}
+			return s;
+		} else {
+			return (new DecimalFormat(f)).format(str.duplo(s,-1));
+		}
+	}
+	//***************************************
+	//testa if de tags
+	public String Xcalc(xmlOut xO,String s) {
+		//logs.grava("calc="+s);
+		String v[] = str.palavraA(s," ");
+		calc cc = new calc();
+		String vv;
+		for (int i=0;i<v.length;i++) {
+			if (!str.vazio(v[i])) {
+				char c = v[i].charAt(0);
+				if (c=='$') {
+					vv = (String)xO.get(v[i].substring(1));
+				} else if ((c>='0' && c<='9') || c=='+' || c=='-' || c=='*' || c=='/' || c=='%') {
+					vv = v[i];
+				} else {
+					vv = dd.getAtr(v[i]);
+				}
+				cc.empil(vv);
+				//logs.grava(i+"==="+v[i]+"=="+vv);
+			}
+		}
+		vv = ""+cc.res();
+		//logs.grava(vv+" "+Xformat(vv,"0000.0000"));
+		return vv;
+	}
+	//***************************************
+	//testa if de tags
+	public boolean Xif(xmlTag m,xmlTag d,xmlOut xO) {
+		String k = m.getAtr(":name");
+		if (k!=null && !k.equals(d.nome)) {
+			return false;
+		}
+		boolean not = false,r=true;
+		String kc;
+		for (Enumeration e=m.atr.keys();r && e.hasMoreElements();) {
+			k = (String)e.nextElement();
+			if (k.charAt(0)!=':') {
+				String v = m.getAtr(k);
+				if (v!=null && v.length()>0 && v.charAt(0)=='@') {
+					v = xO.ped.getString(v.substring(1));
+				}
+				kc = k;
+				//not
+				not = k.charAt(0)=='!';
+				if (not) {
+					kc = k.substring(1);
+				}
+				String v1=null;
+				if (kc.charAt(0)=='@') {
+					//parametro...
+					v1 = ""+xO.ped.getString(kc.substring(1));
+					if (!v1.equals(v)) {
+						r = false;
+					}
+					//logs.grava("v="+v+" v1="+v1+" r="+r+" not="+not);
+				} else {
+					if (v.length()>0 && v.charAt(0)==':') {
+						if (v.indexOf(":"+d.getAtr(k)+":")==-1) {
+							r = false;
+						}
+					} else {
+						v1 = d.getAtr(kc);
+						if (v1==null || !v1.equals(v)) {
+							r = false;
+						}
+					}
+				}
+				if (not) {
+					r = !r;
+				}
+			}
+			//logs.grava("v="+v+" v1="+v1+" k="+k+" kc="+kc+" r="+r);
+		}
+		return r;
+	}
+	//***************************************
+	//retorna atr
+	public String Xatr(xmlOut xO,String n) {
+		char c = n.charAt(0);
+		String v=null;
+		if (c=='@') {
+			v = xO.ped.getString(n.substring(1));
+		} else if (c=='$') {
+			v = (String)xO.get(n.substring(1));
+		} else if (c=='!') {
+			if (n.length()==1) {
+				v = " ";
+			} else {
+				v = n.substring(1);
+			}
+		} else if (c==':') {
+			if (str.equals(n,":calc ")) {
+				v = Xcalc(xO,str.substrAt(n," "));
+			} else	if (str.equals(n,":concat ")) {
+				String a[] = str.palavraA(str.substrAt(str.trimm(n)," ")," ");
+				v = "";
+				for (int i=0;i<a.length;i++) {
+					v += Xatr(xO,a[i]);
+				}
+			}
+
+		} else {
+			v = dd.getAtr(n);
+		}
+		if (v==null) {
+			v = "#null#";
+		}
+		return Xformat(v,getAtr("format"));
+	}
+	//***************************************
+	//ta varrendo modelo, que tem dados?
+	public boolean X(xmlOut xO,int nv) {
+		if (dd==null) {
+			//logs.grava("X "+nome+" = null");
+			return false;
+		} else  if (nome==null || !str.equals(nome,xDel)) {
+			//propaga x
+			//logs.grava("X "+nome+" <> null");
+			return false;
+		}
+		
+		String n = str.substrAt(nome,":");
+		if (n.equals("tags")) {
+			int limite = str.inteiro(getAtr(":limite"),-1);
+			for (int i=0;i<dd.tg.size();i++) {
+				if (limite!=-1 && i>limite) {
+					//xO.on("<br>LIMITE EST="+limite);
+					break;
+				}
+				xmlTag y = dd.get(i);
+				//logs.grava("X tags "+getAtr("name")+" == "+y.nome);
+				if (Xif(this,y,xO)) {
+					//pra cada subtag do modelo aplica a tag dados e mostra...?
+					for (int i1=0;i1<tg.size();i1++) {
+						xmlTag y1 = get(i1);
+						y1.dd = y;
+						y1.gravaTag(xO,nv+1);
+					}
+				}
+			}
+			
+		} else if (n.equals("if")) {
+			if (Xif(this,dd,xO)) {
+				xO.on(tex,nv);
+				for (int i=0;i<tg.size();i++) {
+					xmlTag y = get(i);
+					y.dd = dd;
+					//xO.on(y.tex,nv+1);
+					y.gravaTag(xO,nv+1);
+					//xO.on(y.texF,nv);
+				}
+				xO.on(texF,nv);
+			}
+		
+		} else if (n.equals("attr")) {
+			xO.on("<span class=\""+getAtr("name")+"\">"+Xatr(xO,getAtr("name"))+"</span>"+texF,nv);
+			
+		} else if (n.equals("tag")) {
+			String s = getAtr("set");
+			try {
+				if (s!=null) {
+					xO.buf(true);
+					xO.o("<"+tex);
+				} else {
+					xO.o(str.repl(xO.tb,nv)+"<"+tex);
+				}
+				for (int i=0;i<tg.size();i++) {
+					xmlTag y = get(i);
+					y.dd = dd;
+					y.gravaTag(xO,-99);
+				}
+				if (s!=null) {
+					xO.o(">");
+					String v = xO.buf(false);
+					xO.set(s,v);
+				} else {
+					xO.on(">"+texF);
+				}
+			} catch (Exception e) {
+				logs.grava("xmlTag.X:tag ERRO: ",str.erro(e));
+			}
+		
+		} else if (n.equals("set")) {
+			for (Enumeration e=atr.keys();e.hasMoreElements();) {
+				String k = (String)e.nextElement();
+				if (!k.equals("format")) {
+					xO.set(k,Xformat(Xatr(xO,getAtr(k)),getAtr("format")));
+				}
+			}
+			xO.on(texF,nv);
+			
+		} else if (n.equals("setX")) {
+			String no = getAtr("name");
+			String ac = getAtr("action");
+			xmlTag xm = (xmlTag)xO.get(no);
+			if (ac==null) {
+				xmlTag xu = xm.get(xm.size()-1);
+				for (Enumeration e=atr.keys();e.hasMoreElements();) {
+					String k = (String)e.nextElement();
+					if (!k.equals("name") && !k.equals("format")) {
+						xu.putAtr(k,Xformat(Xatr(xO,getAtr(k)),getAtr("format")));
+					}
+				}
+				xO.on(texF,nv);
+			} else if (ac.equals("tag")) {
+				xm.put(new xmlTag(no));
+			} else if (ac.equals("new")) {
+				xO.set(no,new xmlTag(no));
+				//falta grv attr
+			} else if (ac.equals("sort")) {
+				xm.sort(getAtr("atr"), getAtr("order"));
+			} else if (ac.equals("with")) {
+				//xmlTag d = dd;
+				//dd = xm;
+				for (int d=0;d<xm.size();d++) {
+					for (int i=0;i<tg.size();i++) {
+						xmlTag y = get(i);
+						y.dd = xm.get(d);
+						y.gravaTag(xO,nv);
+					}
+				}
+				//dd = d;
+			} else if (ac.equals("out")) {
+				xm.gravaTag(xO,nv);
+			}
+			
+		} else if (n.equals("with")) {
+			String t = getAtr("type");
+			String a = getAtr("action");
+			String f = Xatr(xO,getAtr("name"));
+			for (int i=1;i<8;i++) {
+				if (getAtr("name"+i)==null) {
+					break;
+				}
+				f += Xatr(xO,getAtr("name"+i));
+			}
+			//xO.on(f);
+			if (t.equals("file")) {
+				if (a!=null && a.equals("append")) {
+					arquivo1 ap = new arquivo1(xO.nameXml(f));
+					ap.append(Xatr(xO,getAtr("text"))+"\n");
+					ap.fecha();
+					return true;
+				} else if (a!=null && a.equals("delete")) {
+					File dl = new File(xO.nameXml(f));
+					//xO.on("<br>Del: "+dl);
+					if (dl.exists()) {
+						return dl.delete();
+					}
+					return false;
+				}
+				//xmlTag aq = xO.xml(f);
+				File aq = new File(xO.nameXml(f));
+				xmlTag dx = dd;
+				if (a!=null && a.equals("notExist")) {
+					if (aq.exists()) {
+						return true;
+					}
+				} else {
+					if (!aq.exists()) {
+						if (a==null || !a.equals("exists")) {
+							xO.on("<hr/>nao existe Arq: "+f+" = "+aq);
+						}
+						return true;
+					}
+					dx = xO.xml(f);
+				}
+				//processa com novos dados
+				//xO.on("<br>processar Arq: "+f+" = "+xO.name);
+				for (int i=0;i<tg.size();i++) {
+					xmlTag y = get(i);
+					y.dd = dx; //.get(d);
+					y.gravaTag(xO,nv);
+				}
+				
+			} else if (t.charAt(0)=='$') {
+				xmlTag x = (xmlTag)xO.get(t.substring(1));
+				if (a.equals("grava")) {
+					f = xO.dirD+"/"+f+".xml";
+					xmlOut xo = new xmlOut(f,xO.dirX,xO.dirD);
+					if (xo.sErro==null) {
+						x.grava(xo,true);
+					} else {
+						xO.on("<br/>xmlTag.X:with:$:grava erro grav xml: "+f);
+						logs.grava("xmlTag.X:with:$:grava erro grav xml: "+f);
+					}
+				}
+			}
+			
+			
+		} else if (n.equals("!")) {
+			
+		} else if (n.equals("calc")) {
+			String k = getAtr("expr");
+			if (k!=null) {
+				xO.on(Xformat(Xcalc(xO,k),getAtr("format"))+texF,nv);
+			} else {
+				xO.on("<span class=\"erro\">x:calc no expr attribute!</span>"+texF,nv);
+			}
+			
+		} else if (n.equals("sort")) {
+			String k = getAtr("key");
+			String o = getAtr("order");
+			dd.sort(k,o);
+			
+		} else if (n.equals("attrPrint")) {
+			xO.on("<table>",nv);
+			for (Enumeration e=dd.atr.keys();e.hasMoreElements();) {
+				String k = (String)e.nextElement();
+				xO.on("<tr><th>"+k+"</th><td>"+dd.getAtr(k)+"</td></tr>",nv+1);
+				//l += " "+k+"=\""+getAtr(k)+"\"";
+			}
+			xO.on("</table>",nv);
+			
+		} else {
+			//xO.on("<span class=\"erro\">cmd x: não processado "+n+"</span>");
+			xO.on(Xatr(xO,n)+texF,nv);
+			//xO.on("<span class=\""+n+"\">"+Xatr(xO,n)+"</span>"+texF,nv);
+
+			//return false;
+		}
+		
+		return true;
+	}
+	//***************************************
+	//merge sub-tag de tag name
+	public void merge(String tagName) {
+		if (nome.equals(tagName)) {
+			for (int i=0;i<size();i++) {
+				xmlTag t = get(i);
+				for (Enumeration e=t.atr.keys();e.hasMoreElements();) {
+					String c = (String)e.nextElement();
+					putAtr(t.nome+"_"+c,t.getAtr(c));
+				}
+				if (!str.vazio(t.tex)) {
+					putAtr(t.nome+"__TEX",t.tex);
+				}
+			}
+			tg = new Hashtable();
+		} else {
+			for (int i=0;i<size();i++) {
+				get(i).merge(tagName);
+			}
+		}
+	}
+	//***************************************
+	//grava chave
+	public void putChA(String s,String atrNome,Object val,String del) {
+		del = del==null?".":del;
+		int p = s.indexOf(del);
+		String sp;
+		if (p==-1) {
+			//logs.grava("tipo: "+s+"~"+val.getClass().getName());
+			if (val.getClass().getName().equals(getClass().getName())) {
+				xmlTag vl = (xmlTag)val;
+				String a = vl.getAtr(atrNome);
+				if (a==null) {
+					put(vl);
+					return;
+				}
+				sp = vl.nome+"~"+a;
+			} else {
+				putAtr(s,(String)val);
+				return;
+			}
+		} else {
+			sp =  s.substring(0,p);
+		}
+		//procura nas tags
+		int tm = tg.size();
+		for (int i = 0;i<tm;i++) {
+			xmlTag x = get(i);
+			String a = x.getAtr(atrNome);
+			a = x.nome+(a==null?"":"~"+a);
+			if (x!=null && a.equals(sp)) {
+				if (p==-1) {
+					put((xmlTag)val,i);
+				} else {
+					x.putChA(s.substring(p+1),atrNome,val,del);
+				}
+				return;
+			}
+		}
+		
+		if (p==-1) {
+			put((xmlTag)val);
+			return;
+		}
+		
+		
+		//não encontrou, inclui
+		xmlTag x;
+		if (sp.indexOf("~")!=-1) {
+			x = new xmlTag(str.leftAt(sp,"~"));
+			x.putAtr(atrNome,str.substrAt(sp,"~"));
+		}  else {
+			x = new xmlTag(sp);
+		}
+		put(x);
+		x.putChA(s.substring(p+1),atrNome,val,del);
+	}
+	//***************************************
+	//grava chave
+	public void putCh(String s,String val) {
+		putCh(s,val,".");
+	}
+	//***************************************
+	//grava chave
+	public void putCh(String s,String val,String del) {
+		del = del==null?".":del;
+		int p = s.indexOf(del);
+		if (p==-1) {
+			putAtr(s,val);
+			return;
+		}
+		//procura nas tags
+		String sp = s.substring(0,p);
+		int tm = tg.size();
+		for (int i = 0;i<tm;i++) {
+			xmlTag x = get(i);
+			if (x!=null && x.nome.equals(sp)) {
+				x.putCh(s.substring(p+1),val,del);
+				return;
+			}
+		}
+		//não encontrou, inclui
+		xmlTag x = new xmlTag(sp);
+		put(x);
+		x.putCh(s.substring(p+1),val,del);
+	}
+	//***************************************
+	//recebe parametros separados por . e retorna objeto
+	//q pode ser xmlTag ou Atributo
+	public Object getCh(String v[]) {
+		xmlTag rn,r = this;
+		for (int i=0;i<v.length;i++) {
+			int p=0;
+			while ((rn=r.get(p++))!=null) {
+				if (rn.nome.equals(v[i])) {
+					break;
+				}
+			}
+			if (rn==null) {
+				if (i==v.length-1) {
+					//retorna atributo
+					return r.getAtr(v[i]);
+				}
+				return null;
+			}
+			r = rn;
+		}
+		return r;
+	}
+	public Object getCh(String s) {
+		return getCh(s,".");
+	}
+	public Object getCh(String s,String del) {
+		String v[] = str.palavraA(s,del);
+		return getCh(v);
+	}
+	//***************************************
+	public boolean grava(String nome) {
+		return grava(nome,false);
+	}
+	//***************************************
+	public boolean gravaTag(String nome) {
+		return grava(nome,true);
+	}
+	//***************************************
+	public boolean grava(String nome,boolean tag) {
+		return grava(new xmlOut(nome),tag);
+	}
+	//***************************************
+	public boolean grava(xmlOut xO,boolean tag) {
+		//logs.grava("buf="+buf);
+		//if (true) return true;
+		try {
+			if (tag || getCh("?xml")==null) {
+				xO.on("<?xml version=\"1.0\" encoding=\"ISO-8859-1\" ?>");
+				xO.on("");
+			}
+			if (tag) {
+				gravaTag(xO,0);
+			} else {
+				//sub-tags
+				for (int i=0;i<size();i++) {
+					xmlTag xt = get(i);
+					if (!xt.removida) {
+						xt.dd = dd;
+						xt.gravaTag(xO,0);
+					}
+				}
+			}
+			xO.close();
+		} catch (Exception e) {
+			logs.grava("erro","xmlTag.grava:"+str.erro(e));
+			return false;
+		}
+		return true;
+	}
+	//***************************************
+	public boolean gravaTag(xmlOut xO,int nv) {
+		
+		if (X(xO,nv)) {
+			return true;
+		}
+		
+		//tag e atributos
+		//String endn = (xO.tb==null || nv<1?"":str.repl("\t",nv));
+		String l = "<"+nome;
+		String fm = "/",fmc="</"+nome+">";
+		if (nome!=null) {
+			if (nome.charAt(0)=='?') {
+				fm = "?";
+				fmc = "<"+nome+">";
+			} else if (nome.charAt(0)=='!') {
+				fm = "";
+				fmc = "<"+nome+">";
+			}
+		}
+		for (Enumeration e=atr.keys();e.hasMoreElements();) {
+			String k = (String)e.nextElement();
+			l += " "+k+"=\""+getAtr(k)+"\"";
+		}
+
+		int t = size();
+		boolean tx = !str.vazio(tex);
+		boolean fechaTag = (tx || t>0);
+		
+		//grava tex
+		if (fechaTag) {
+			//se so tem texto sem nova linha e não tem filhos
+			if (tg.size()==0 && tx && str.vazio(texF) && tex.indexOf("\n")==-1) {
+				xO.on(l+">"+tex+fmc,nv);
+				return true;
+			} else {
+				xO.on(l+">",nv);
+				if (tx) {
+					String v[] = str.palavraA(tex,"\n");
+					for (int i=0;i<v.length;i++) {
+						xO.on(str.trimm(v[i]),nv+1);
+					}
+				}
+			}
+		} else {
+			xO.on(l+fm+">",nv);
+		}
+		
+		//sub-tags
+		for (int i=0;i<t;i++) {
+			xmlTag xt = get(i);
+			xt.dd = dd;
+			if (!xt.removida) {
+				xt.gravaTag(xO,nv+1);
+			}
+		}
+		
+		//fecha tag
+		if (fechaTag) {
+			xO.on(fmc,nv);
+		}
+		
+		//texto no fim da tag?
+		if (!str.vazio(texF)) {
+			String v[] = str.palavraA(texF,"\n");
+			for (int i=0;i<v.length;i++) {
+				xO.on(str.trimm(v[i]),nv+1);
+			}
+		}
+		return true;
+	}
+	//***************************************
+	public int size() {
+		return tg.size();
+	}
+	//***************************************
+	public void remove(int i) {
+		xmlTag r = (xmlTag)tg.get(""+i);
+		if (r!=null) r.removida = true;
+	}
+	//***************************************
+	public xmlTag get(int i) {
+		xmlTag r = (xmlTag)tg.get(""+i);
+		if (r!=null) r.pos = 0;
+		return r;
+	}
+	//***************************************
+	public xmlTag listTag(String tag) {
+		xmlTag r=null;
+		while ((r=get(pos++))!=null) {
+			//logs.grava(r.nome+tag);
+			if (tag==null || r.nome.equals(tag)) {
+				break;
+			}
+		}
+		//logs.grava("r="+pos+" "+r);
+		return r;
+	}
+	//***************************************
+	public void putTag(String a,String b) {
+		xmlTag t = new xmlTag(a);
+		t.tex = b;
+		put(t);
+	}
+	//***************************************
+	public void put(xmlTag tg1) {
+		put(tg1,tg.size());
+	}
+	//***************************************
+	public void put(xmlTag tg1,int ps) {
+		tg.put(""+ps,tg1);
+	}
+	//***************************************
+	public String getAtr(String s,String p) {
+		String r = getAtr(s);
+		if (r==null) return p;
+		return r;
+	}
+	//***************************************
+	public String getAtr(String s) {
+		return (String)atr.get(s);
+	}
+	//***************************************
+	public void putAtr(String n,String v) {
+		atr.put(n,v);
+	}
+	//***************************************
+	public xmlTag() {
+	}
+	//***************************************
+	public xmlTag(String nome) {
+		this.nome = nome;
+	}
+}

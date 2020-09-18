@@ -1,0 +1,26 @@
+package br.org.guarani.util;
+
+import java.util.*;
+
+
+//***********************
+//dados do sistema operarional
+//***********************
+public class so {
+ //***********************
+ public static boolean linux() {
+  return System.getProperty("os.name").toLowerCase().equals("linux");
+ }
+ //***********************
+ public static String nomePrg() {
+  return System.getProperty("gnu.gcj.progname");
+ }
+ //***********************
+ public static String dirPrg() {
+  return str.leftRat(nomePrg(),"\\");
+ }
+ //***********************
+ public static String dirTmp() {
+  return System.getProperty("java.io.tmpdir");
+ }
+}

@@ -1,0 +1,36 @@
+package br.org.guarani.loader;
+
+import java.io.*;
+import java.util.*;
+import java.lang.reflect.*;
+
+//**************************************************************
+//**************************************************************
+public class loaderI extends loaderInterface  {
+	private int pos;
+	//**************************************************************
+	public void run() {
+	}
+	//**************************************************************
+	public Class loadClass(String nome) {
+		return load.loadClass(pos,nome);
+	}
+	//**************************************************************
+	public boolean reLoad() {
+		return false;
+	}
+	//**************************************************************
+	public boolean reset() {
+		int t = load.testa();
+		if (t==-1) { 
+			//nada a fazer
+		} else if (t<=pos) {
+			return true;
+		}
+		return false;
+	}
+	//**************************************************************
+	loaderI(int Pos) {
+		pos = Pos;
+	}
+}

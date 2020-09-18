@@ -1,0 +1,62 @@
+package br.org.guarani.util;
+
+import java.net.*;
+import javax.net.ssl.*;
+import java.io.*;
+import java.util.*;
+
+import br.org.guarani.util.*;
+import br.org.guarani.servidor.*;
+
+//set 2016 - encoding
+// file.encoding	bla. 
+
+//***************************************
+//***************************************
+public class webX509 {
+	//***************************************
+	public String leUrl(URL u,String user) {
+		
+	}
+	//********************************
+	//retorna sslsocket auth user alias
+	public SSLSocket socket(String host,int porta,String user)  {
+		
+		openKeys();
+
+		try {
+			/////////////////////////////////////////////////////////////////////
+			// chave identif filtrada user
+			
+			KeyManager kmfi[] = new KeyManager[]{getKeyM((X509KeyManager)kmf.getKeyManagers()[0],user,user)};
+			on("<hr><br>nro de chaves identificacao '"+user+"' = "+kmfi.length);
+
+			/////////////////////////////////////////////////////////////////////
+			// socket
+			
+			// SSLContext
+							//	( to create the ssl factory )
+							// This is the only way to use server sockets with JSSE 1.0.1
+			javax.net.ssl.SSLContext context = javax.net.ssl.SSLContext.getInstance("TLS"); //SSL
+			// init context with the key managers
+			context.init(kmfi, tm, null); //kmf.getKeyManagers()
+
+			SSLSocketFactory sslProxy 
+				= context.getSocketFactory();
+			SSLSocket sslSocket
+				= (SSLSocket) sslProxy.createSocket(host,porta);
+			//config
+			sslSocket.setWantClientAuth(true);
+			sslSocket.setNeedClientAuth(true);
+			
+			return sslSocket;		
+
+		} catch (Exception ex) {
+			on("<hr>ERRO criando HTTPS socket user="+user+": " + str1.html(ex) );
+			//throw new IOException( "Exception trying to load keystore " + keyFile + ": " + ex.getMessage() ); 
+			return null;
+
+		}
+	}
+	
+}
