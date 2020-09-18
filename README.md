@@ -1,0 +1,2 @@
+# guarani
+servidor pessoal 
