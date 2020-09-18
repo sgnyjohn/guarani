@@ -1,0 +1,347 @@
+/*
+  Nilson - Out/2001
+*/
+
+
+import java.util.*;
+
+import br.org.guarani.servidor.*;
+import br.org.guarani.util.*;
+import bd.*;
+
+
+//*****************************************//
+//*****************************************//
+public class ramais extends PagV {
+ Dados dad;
+ DadosSet DS;
+ String grupo;
+
+ //*****************************************//
+ public boolean run(Pedido pd) {
+  super.run(pd);
+  
+  dad = new Dados("Usuarios");
+  margem = 3;
+  cab("Usuários");
+  menu();
+  incluiJs("mz-ns-ie.js");
+
+  exec();
+
+  dad.close();
+  ped.on("<table align=center border=1>");
+  for (int i=0;i<10;i++) {
+   ped.on(((i%5==0)?"<tr>":"")+"<td><A class=a_popUp onClick=usu.abre(this,"+i+")>TESTE"+i+"</A>");
+  }
+  ped.on("</table>");
+
+  ped.on(
+    "<script>\n"
+   +" var usu = new menuPopUp('usu','Usuário',new Array('Alterar Dados','2222'));\n"
+   +"</script>\n");
+
+  rodap();
+
+  return true;
+ }
+
+ //*****************************************//
+ public void inicio() {
+  String Usu="",Mic="", C_lotacao="", C_Orgao="", M="";
+
+  Usu = ped.getString("Usuario","");
+  Mic = ped.getString("Micro","");
+  C_lotacao = ped.getString("C_lotacao","");
+  C_Orgao = ped.getString("C_Orgao","");
+  M = ped.getString("op1","");
+
+
+  ped.on("<table class=tab_form align=center>");
+  ped.on("<form action="+atalho()+" method=post>");
+  ped.on("<input type=hidden name=op value=pesquisa>");
+  ped.on("<tr><td class=td_formRot>Usuário:<td class=td_formDad>");
+  ped.on("<input type=text name=Usu size=40>");
+  ped.on("<tr><td class=td_formRot>Orgão:<td class=td_formDad>");
+  select("C_Orgao","select C_Orgao, Orgao from orgao order by Orgao",null);
+  ped.on("<tr><td class=td_formRot>Lotação:<td class=td_formDad>");
+  select("C_lotacao","select C_lotacao, ORGR from lotacao order by ORGR",null);
+  ped.on("<tr><td class=td_formRot>Micro(Logon):<td class=td_formDad>");
+  ped.on("<input type=text name=Mic size=30>");
+  ped.on("<tr><td colspan=2 align=center><input type=submit value=Consultar>");
+  ped.on(" </form></table>");
+
+ }
+
+ //*****************************************//
+ public void pesquisa() {
+  String grup = str.seNull(ped.getString("grup"),"").trim();
+  String setor = str.seNull(ped.getString("setor"),"").trim();
+
+  if (true) {
+   ped.on("<a href=ramais.class?op=novo><b>Adicionar<br>Usuário</b></a><hr>");
+  }
+
+  String Us="",Mi="", Og="", Lt="";
+  Us = ped.getString("Usu","");
+  Mi = ped.getString("Mic","");
+  Og = ped.getString("C_Orgao","");
+  Lt = ped.getString("C_lotacao","");
+
+
+  String sqlU="SELECT Usuarios.Nome, Usuarios.c_usuario, Usuarios.c_lotacao, Usuarios.c_funcao, "+
+                      "Usuarios.Nome_NT, Usuarios.nome_notes, Usuarios.Matricula, Usuarios.Email_Dir, "+
+                      "lotacao.ORGR, lotacao.c_lotacao, lotacao.c_orgao, lotacao.c_subchefia, "+
+                      "orgao.c_orgao, subchefia.c_subchefia, funcao.Funcao, "+
+                      "orgao.Orgao, subchefia.Subchefia, Usuarios.Ramal, Usuarios.email, "+
+                      "orgao.Dom_Direto, orgao.https, orgao.resp "+
+              "FROM subchefia, orgao, lotacao, Usuarios, funcao "+
+              "WHERE lotacao.c_lotacao = Usuarios.c_lotacao AND "+
+                       "orgao.c_orgao = lotacao.c_orgao AND "+
+                      "subchefia.c_subchefia = lotacao.c_subchefia AND "+
+                      "Usuarios.c_funcao = funcao.c_funcao";
+
+
+   DS = dad.executeQuery(sqlU+ ((Us=="") ? "" : " And (nt = true Or notes = true)"+
+           " And (Usuarios.Nome like '%"+Us+"%' or "+
+           "Usuarios.Nome_NT like '%"+Us+"%' or Usuarios.nome_notes like '%"+Us+"%')")+
+           ((Og.equals("")) ? "" : " And orgao.c_orgao ="+Og)+
+           ((Lt.equals("")) ? "" : " And Usuarios.c_lotacao="+Lt)+
+           " ORDER BY orgao.Orgao, lotacao.ORGR, Usuarios.Nome");
+
+
+   int nr = 0;
+   grup = "";
+   String g;
+   setor = "";
+   String s;
+
+   ped.on("<table align=center border=2 bordercolor=red width=90% align=center>");
+
+   while (DS.next()) {
+    nr++;
+    g = DS.getString("Orgao");
+    s = DS.getString("ORGR");
+    if (g.compareTo(grup)!=0) {
+     ped.on("<tr><td colspan=7 align=center bgcolor=abcde><b><font size=4>"+g);
+    }
+    grup = g;
+    if (s.compareTo(setor)!=0) {
+     ped.on("<tr><td colspan=7 align=center bgcolor=abcde>Setor:<b>"+s+
+      "<tr><td>Nome<td>Ramal<td>E-mail Piratini<br>E-mail Direto"+
+      "<td>Matrícula<br>Cargo<td>logon");
+    }
+    setor = s;
+    ped.on("<tr><td><a href=\"ramais.class?op=altera&c_usuario="+
+        DS.getString("c_usuario")+"\">"+
+        DS.getString("Nome")+"</a>");
+    ped.on("<td align=center><b><font size=4>"+DS.getString("Ramal")+
+        "<td><color=red>"+
+        "<a href=\"mailto:"+DS.getString("Nome")+" <"+
+        DS.getString("email")+"@piratini.rs.gov.br>\""+">"+
+        DS.getString("email")+"@piratini.rs.gov.br"+"</a><br>"+
+        "<a href=\"mailto:"+DS.getString("Nome")+" <"+
+        DS.getString("Email_Dir")+">\""+">"+
+        DS.getString("Email_Dir")+"</a>");
+        
+    ped.on("<td>"+DS.getString("Matricula")+"<br>"+DS.getString("Funcao"));
+
+    ped.on("<td><a href=\"ramais.class?op=logon&op1=listar&op2=user&Us="+
+        DS.getString("Nome_NT")+"\">Logon</a>");
+    ped.on("<br><a href=\"smb.class?op=nome&nome="+
+        DS.getString("Nome_NT")+"^03\">onde</a>");
+   }
+    ped.on("</table>");
+ }
+
+ //*****************************************//
+ public void logon() {
+  LogonRede a = new LogonRede(this);
+  a.exec();
+ }
+
+ //*****************************************//
+ public void altera() {
+  novo();
+ }
+
+ //*****************************************//
+ public void novo() {
+  String Nome="",nt="",nome_NT="",notes="",nome_Notes="",email="", Ramal="",
+         Matricula="", MailFile="", C_lotacao="", c_funcao="", c_tipo="", Us="", Email_Dir="";
+
+
+  Us = ped.getString("c_usuario","");
+
+  if (Us!="") {
+   DS = dad.executeQuery("SELECT * FROM Usuarios where c_usuario="+Us);
+   DS.next();
+   Nome        = DS.getString("Nome");
+   nt          = DS.getString("nt");
+   nome_NT     = DS.getString("nome_NT");
+   notes       = DS.getString("notes");
+   nome_Notes  = DS.getString("nome_Notes");
+   email       = DS.getString("email");
+   Email_Dir   = DS.getString("Email_Dir");
+   Ramal       = DS.getString("Ramal");
+   Matricula   = DS.getString("Matricula");
+   MailFile    = DS.getString("MailFile");
+   C_lotacao   = DS.getString("C_lotacao");
+   c_funcao    = DS.getString("c_funcao");
+   c_tipo      = DS.getString("c_tipo");
+  }
+
+  ped.on("<script language=\"JavaScript\" src=\"/js/valida.js\"></script>");
+  ped.on("<font size=4><br><b>"+((Us!="") ? "Altere dados do Usuário":
+    "Informe os dados do novo Usuário")+":</font></b><hr>");
+  ped.on("<table align=center border=1 bordercolor=red>");
+
+  ped.on("<form action=ramais.class method=post>");
+  if (Us!="") ped.on("<input name=c_usuario type=hidden value="+Us+">");
+  ped.on("<input name=op type=hidden value=grava>");
+
+  ped.on("<tr><td align=right>Nome: <td>");
+  ped.on("<input name=Nome size=60 maxlength=60 value='"+Nome+"'>");
+
+  if (nt.equals("1"))ped.on("<br>Nome NT =====> <b>"+nome_NT+"</b>");
+
+  if (notes.equals("1")) {
+   ped.on("<br>Nome Notes ===> <b>"+nome_Notes+"</b>");
+   ped.on("<br>E-Mail =======> <b>"+email+"</b>");
+   ped.on("<br>Arquivo ======> <b>"+MailFile+"</b>");
+  }
+
+  ped.on("<tr><td align=right>E-mail Direto: <td>");
+  ped.on("<input name=Email_Dir size=50 maxlength=50 value='"+Email_Dir+"'>");
+  ped.on("<tr><td align=right>Lotação: <td>");
+  select("C_lotacao","select C_lotacao, ORGR from lotacao order by ORGR",C_lotacao);
+  ped.on("<tr><td align=right>Matrícula: <td>");
+  ped.on("<input name=Matricula size=30 maxlength=30 value='"+Matricula+"'>");
+  ped.on("<tr><td align=right>Telefone: <td>");
+  ped.on("<input name=Ramal size=40 maxlength=40 value='"+Ramal+"'>");
+  ped.on("<tr><td align=right>Função: <td>");
+  select("c_funcao","select c_funcao, Funcao from funcao order by Funcao",c_funcao);
+  ped.on("<tr><td align=right>Tipo: <td>");
+  select("c_tipo","select c_tipo, tipo from tipo order by tipo",c_tipo);
+
+  ped.on("<tr><td colspan=2 align=center><input type=submit value="+((Us!="") ? "Alterar":"Incluir")+">");
+  ped.on(" </form>");
+  ped.on("</table>");
+ }
+
+ //*****************************************//
+ private void select(String nome, String query, String sel) {
+  String s;
+
+  ped.on("<select name="+nome+">");
+  if (sel==null) {
+   ped.o("<option value=></option>");
+   sel="";
+  }
+  DS = dad.executeQuery(query);
+  if (dad.erro) {
+  	ped.erro(dad.sErro);
+  	return;
+ 	}
+
+  while (DS.next()) {
+   s = DS.getString(1);
+   ped.o("<option "+((sel.equals(s)) ? "selected": "")+" value="+s+">"+DS.getString(2));
+  }
+  ped.on("</select>");
+ }
+
+ //*****************************************//
+ public void grava() {
+  String Us;
+  Us = ped.getString("c_usuario","");
+
+  String u;
+  if (Us=="") {
+   u = "Insert into Usuarios (Nome, nome_NT, c_lotacao, Matricula, "+
+    "Ramal, c_tipo, c_funcao, Email_Dir)"+
+    " values ('"+ped.getString("Nome")+"','"+ped.getString("Nome")+"',"+ped.getString("C_lotacao")+",'"+
+    ped.getString("Matricula")+"','"+ped.getString("Ramal")+"',"+
+    ped.getString("c_tipo")+","+ped.getString("c_funcao")+","+ped.getString("Email_Dir")+")";
+  } else {
+   u = "update Usuarios set Nome='"+ped.getString("Nome")+"',"+
+    "c_lotacao="+ped.getString("C_lotacao")+","+
+    "Matricula='"+ped.getString("Matricula")+"',"+
+    "Email_Dir='"+ped.getString("Email_Dir")+"',"+
+    "Ramal='"+ped.getString("Ramal")+"',"+
+    "c_tipo="+ped.getString("c_tipo")+","+
+    "c_funcao="+ped.getString("c_funcao")+""+
+    " where c_usuario="+ped.getString("c_usuario");
+  }
+  dad.executeUpdate(u);
+  ped.on("<hr> usuário atualizado");
+ }
+
+
+ //*****************************************//
+ public void dominio() {
+  String C_Orgao;
+
+  C_Orgao = ped.getString("C_Orgao","");
+
+  ped.on("<table align=center border=2 bordercolor=red>");
+
+  ped.on("<form action=ramais.class method=post>");
+  ped.on(" <input type=hidden name=op value=pesq_dom>");
+  ped.on("<tr><td align=right>Orgão: <td>");
+  select("C_Orgao","select C_Orgao, Orgao from orgao order by Orgao",null);
+  ped.on("<tr><td colspan=2 align=center><input type=submit value=Consultar>");
+  ped.on(" </form></table>");
+
+ }
+
+ //*****************************************//
+ public void pesq_dom() {
+  String grup = str.seNull(ped.getString("grup"),"").trim();
+
+  String Org = ped.getString("C_Orgao","");
+
+  if (true) {
+   ped.on("<a href=ramais.class?op=novo_dom><b>Adicionar<br>Dominio</b></a><hr>");
+  }
+
+
+  String sqlO="SELECT lotacao.ORGR, lotacao.c_lotacao, lotacao.c_orgao, lotacao.resp, "+
+                      "orgao.c_orgao, orgao.Orgao, orgao.Dom_Direto, orgao.https, orgao.resp "+
+              "FROM orgao, lotacao "+
+              "WHERE orgao.c_orgao = lotacao.c_orgao";
+
+  DS = dad.executeQuery(sqlO+ ((Org.equals("")) ? "" : " And orgao.c_orgao="+Org)+
+         " ORDER BY orgao.Orgao, lotacao.ORGR");
+
+  grup = "";
+  String g;
+  ped.on("<table border=2 bordercolor=red width=90% align=center>");
+
+  while (DS.next()) {
+   g = DS.getString("Orgao");
+   if (g.compareTo(grup)!=0) {
+    ped.on("<tr><td colspan=4 align=center bgcolor=abcde><b>Órgão:"+g+
+    "<br>https:"+DS.getString("https")+"<br>responsável:"+DS.getString("orgao.resp"));
+   }
+   grup = g;
+   ped.on("<tr><td>"+DS.getString("ORGR")+"<td>"+DS.getString("Dom_Direto")+
+   "<td>"+DS.getString("https")+"<td>"+DS.getString("resp")+"<tr>");
+  }
+   ped.on("</table>");
+ }
+
+
+
+ //***************************//
+ public void menu()  {
+  ped.on("<table border=1 bgcolor=yellow width=100% >");
+  ped.on("<tr>");
+  ped.on("<td align=center>"+atalho("op=inicio","<b>Ramais"));
+  ped.on("<td align=center>"+atalho("op=dominio","<b>Setores"));
+  ped.on("<td align=center>"+atalho("op=logon","<b>Logon"));
+  ped.on("<td align=center><a href=//piratini/scripts/usuarios/adm/Atualiza_usuarios.idc?><b>Importa Usuários</a>");
+  ped.on("</table>");
+ }
+
+}

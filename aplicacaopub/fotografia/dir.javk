@@ -1,0 +1,72 @@
+/*
+  Signey - Out/2001
+*/
+
+package fotografia;
+
+import util.*;
+import java.io.*;
+import br.org.guarani.servidor.*;
+import br.org.guarani.util.*;
+//*****************************************//
+//*****************************************//
+public class dir extends Pag {
+ private static boolean mount = false;
+ //*****************************************//
+ public void foto() {
+  fotos f = new fotos(ped);
+  //ped.on(fotos.dirt+ped.getString("dra")+ped.getString("arq"));
+  File ar = new File(fotos.diri+ped.getString("dra")+ped.getString("arq"));
+  foto f1 = new foto(f,ar);
+  String op1 = ped.getString("op1");
+  if (op1.equals("edita")) f1.edita();
+  if (op1.equals("gira")) f1.gira();
+  if (op1.equals("original")) f1.original();
+ }
+
+ //*****************************************//
+ public boolean run(Pedido pd) {
+  super.run(pd);
+
+  margem = 0;
+  cab("Fotografia");
+  menu();
+  
+  if (!mount) {
+   mount = true;
+   executa e = new executa();
+   e.exec(ped,"sh /mnt/serv/foto.sh");
+  }
+  exec();
+
+  rodap();
+  return true;
+ }
+ //*****************************************//
+ public void dir() {
+  fotos f = new fotos(ped);
+  f.html();
+ }
+ //*****************************************//
+ public void pesq() {
+  dir();
+ }
+ //*****************************************//
+ public void pub() {
+  dir();
+ }
+ //*****************************************//
+ public void inicio() {
+  dir();
+ }
+ //***************************//
+ public void menu()  {
+  ped.on("<table border=1 bgcolor=yellow width=100% >");
+  ped.on("<tr>");
+  ped.on("<td align=center><a href=dir.class?op=dir><b>Dir</a>");
+  ped.on("<td align=center><a href=dir.class?op=pesq><b>Pesquisa</a>");
+  ped.on("<td align=center><a href=dir.class?op=pub><b>Publicar</a>");
+  ped.on("</table>");
+ }
+
+}

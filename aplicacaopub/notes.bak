@@ -1,0 +1,110 @@
+/*
+ * Signey John jan/2001.
+ */
+
+import java.util.*;
+
+import br.nom.signey.guarani.*;
+import br.nom.signey.util.*;
+
+
+public class notes implements Prg {
+ protected String op;
+ protected Pedido ped;
+ protected Hashtable sv;
+ protected Hashtable hs;
+
+ public boolean run(Pedido pd) {
+  String tp="",s;
+
+  ped = pd;
+
+  op = ped.getString("op");
+  if (op==null) {
+   op = "/govdocel.nsf/Html?OpenView&Count=130";
+  } else {
+   sv = ped.getParametros();
+   for (Enumeration e = sv.keys() ; e.hasMoreElements() ;) {
+    s = (String)e.nextElement();
+    if (s.compareTo("op")!=0) {
+     //ped.on(s+": "+hs.get(s));
+     op += "&"+s+": "+sv.get(s);
+    }
+   }
+  }
+  System.out.println("<hr>"+op+"<hr>");
+
+
+  web h = new web("172.27.79.10");
+  if (op.indexOf(".nsf")>-1) h.setCab("Authorization: Basic cmVkOnJlZGFjYW8wMA==\r\n");
+  boolean a = h.conecta();
+  if (a) a = h.pede(op);
+  if (a) a = h.leCab();
+
+  if (a) tp = h.getCabTipo();
+  if (tp==null) {
+   tp = "";
+   System.out.println("===="+h.getCabTxt()+"=====");
+  }
+  if (!a) {
+   ped.on("ERRO "+h.erro());
+
+  } else if (tp.indexOf("text/")>-1) {
+   ped.on("<html><head><title>Acesso NOTES</title></head>");
+   ped.on("<body background=\"/imagens/fundo.gif\" bgcolor=\"#FFFFFF\" TOPMARGIN=\"0\" LEFTMARGIN=\"0\" MARGINWIDTH=\"0\" MARGINHEIGHT=\"0\">");
+   menu();
+   a = h.leTxt();
+   if (a) {
+    s = str.troca(h.getTxt(),"HREF=\"","HREF=\"/notes.class?op=");
+    s = str.troca(s,"src=","src=/notes.class?op=");
+    s = str.troca(s,"SRC=\"","SRC=\"/notes.class?op=");
+    ped.on(s);
+
+   } else {
+    ped.on("<h1>ERRO ACESSANDO NOTES="+op+" = "+h.erro()+"</h1>");
+
+   }
+   ped.print("teste=");
+   ped.on(h.erro()+"<hr>"+tp);
+   ped.on("</body>");
+   ped.on("</html>");
+
+  } else {
+   ped.setCab(null);
+   hs = h.getCab();
+
+   s = "HTTP/1.0 200 OK\r\n"+
+       "Content-Type: "+tp+"\r\n"+
+       ((op.indexOf(".nsf")>-1) ? "Authorization: Basic cmVkOnJlZGFjYW8wMA==\r\n" : "")+
+       "Content-Length: "+hs.get("content-length")+"\r\n\r\n";
+   ped.print(s);
+
+   for (Enumeration e = hs.keys() ; e.hasMoreElements() ;) {
+    s = (String)e.nextElement();
+    if (s.compareTo("server")!=0 & s.compareTo("?")!=0) {
+     //ped.on(s+": "+hs.get(s));
+     //System.out.println(s+": "+hs.get(s));
+    }
+   }
+
+   h.leOut(ped.getOutputStream());
+  }
+
+  if (a) h.fecha();
+
+  return true;
+ }
+
+ public void menu()  {
+  ped.on("<table width=100% >");
+  ped.on("<tr>");
+  ped.on("<td HEIGHT=15 align=center><a href=/scripts/intranet.idc target=conteudo><b>Intranet</a>");
+  ped.on("<td align=center><a href=/atalhos target=conteudo><b>Internet</a>");
+  ped.on("<td align=center><a href=\"/scripts/atalhos/pesquisa-gnome.idc?grup=Governo\" target=conteudo><b>Governo</a>");
+  ped.on("<td align=center><a href=\"/scripts/atalhos/pesquisa-gnome.idc?grup=Notícias\" target=conteudo><b>Notícias</a>");
+  ped.on("<td align=center><a href=\"/ajuda/pub\" target=conteudo><b>Ajuda</a>");
+  ped.on("</table><hr>");
+ }
+
+
+}

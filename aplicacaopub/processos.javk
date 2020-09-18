@@ -1,0 +1,176 @@
+/*
+  Nilson - Dez/2001
+*/
+
+import util.*;
+import bd.*;
+import br.org.guarani.servidor.*;
+import br.org.guarani.util.*;
+
+//*****************************************//
+//*****************************************//
+public class processos extends Pag {
+  Dados dad=null;
+  DadosSet DS;
+
+
+
+ //*****************************************//
+ public boolean run(Pedido pd) {
+  super.run(pd);
+
+  if (dad==null)
+   dad = new Dados("processos");
+
+  menu();
+  margem = 3;
+  cab("Controle interno de Processos");
+  exec();
+  dad.close();
+  rodap();
+
+  return true;
+ }
+
+ //*****************************************//
+ public void inicio() {
+  String Spi, Ori, Nom, Des;
+
+  Spi = ped.getString("Spi");
+  Ori = ped.getString("Ori");
+  Nom = ped.getString("Nom");
+  Des = ped.getString("Des");
+
+
+  ped.on("<center><font size=3>");
+  ped.on("<table border=2 bordercolor=red>");
+  ped.on("<font face=\"Arial\" size=2></center>");
+  ped.on("<form action=processos.class method=post>");
+  ped.on(" <input type=hidden name=op value=pesquisa>");
+  ped.on("<tr><td align=right>Número Spi:<td>");
+  ped.on("<input type=text name=Spi size=30>");
+  ped.on("<tr><td align=right>Origem:<td>");
+  ped.on("<input type=text name=Ori size=50>");
+  ped.on("<tr><td align=right>Nome:<td>");
+  ped.on("<input type=text name=Nom size=50>");
+  ped.on("<tr><td align=right>Descrição:<td>");
+  ped.on("<input type=text name=Des size=50>");
+  ped.on("<tr><td colspan=2 align=center><input type=submit value=Consultar>");
+  ped.on(" </form></table>");
+
+ }
+
+ //*****************************************//
+ public void pesquisa() {
+  ped.on("<font face=\"Arial\" size=2></center>");
+
+  if (true) {
+   ped.on("<center><a href=processos.class?op=novo><b>Adicionar<br>Processo</b></a></center><hr>");
+  }
+
+  String Spi, Ori, Nom, Des;
+  Spi = ped.getString("Spi","");
+  Ori = ped.getString("Ori","");
+  Nom = ped.getString("Nom","");
+  Des = ped.getString("Des","");
+
+
+
+  String sql = "SELECT * From Proc";
+  int nr = 0;
+
+
+  DS = dad.execSql(sql+((Spi=="") ? "" : " And Proc.Num_Spi like '%"+Spi+"%'")+
+           ((Ori=="") ? "" : " And Proc.Origem like '%"+Ori+"%'")+
+           ((Nom=="") ? "" : " And Proc.Nome like '%"+Nom+"%'")+
+         " ORDER BY Dt_Proc Desc");
+
+  ped.on("<table border=1>");
+  while (DS.next()) {
+   ped.on("<tr><td><a href=\"processos.class?op=altera&c_Processo="+
+       DS.getString("cpesso")+"\">"+
+       DS.getString("Num_Spi")+"</a><br>");
+   nr++;
+  }
+    ped.on("</table>");
+ }
+
+ //*****************************************//
+ public void altera() {
+  novo();
+ }
+
+ //*****************************************//
+ public void novo() {
+  String cp="",Num_Spi="", Origem="", Nome="",Descr="", Q_Rec="", Q_Env="";
+
+
+  cp = ped.getString("cpesso","");
+
+  if (cp!="") {
+   DS = dad.execSql("SELECT * FROM Proc where cpesso="+cp);
+   if (dad.erro) return;
+   DS.next();
+   Num_Spi        = DS.getString("Num_Spi");
+   Origem         = DS.getString("Origem");
+   Nome           = DS.getString("Nome");
+   Descr          = DS.getString("Descr");
+//   Q_Rec          = DS.getString("Q_Rec");
+//   Q_Env          = DS.getString("Q_Env");
+  }
+
+  ped.on("<script language=\"JavaScript\" src=\"/js/valida.js\"></script>");
+  ped.on(" <align=Center><font size=4><br><b>"+((cp!="") ? "Altere dados do Processo":
+    "Informe os dados do novo Processo")+":</font></center></b><hr>");
+  ped.on("<center><font size=3>");
+  ped.on("<table border=1 bordercolor=red>");
+  ped.on("<font face=\"Arial\" size=2></center>");
+  //   ped.on("<table border=2 bordercolor=red width=90% align=center>");
+
+
+  ped.on("<form action=processos.class method=post>");
+  if (cp!="") ped.on("<input name=cpesso type=hidden value="+cp+">");
+  ped.on("<input name=op type=hidden value=grava>");
+
+  ped.on("<tr><td align=right>Número Spi: <td>");
+  ped.on("<input name=Num_Spi size=30 maxlength=30 value='"+Num_Spi+"'>");
+  ped.on("<tr><td align=right>Origem: <td>");
+  ped.on("<input name=Origem size=50 maxlength=50 value='"+Origem+"'>");
+  ped.on("<tr><td align=right>Nome: <td>");
+  ped.on("<input name=Nome size=50 maxlength=50 value='"+Nome+"'>");
+
+  ped.on("<tr><td colspan=2 align=center><input type=submit value="+((cp!="") ? "Alterar":"Incluir")+">");
+  ped.on(" </form>");
+  ped.on("</table>");
+ }
+
+
+ //*****************************************//
+ public void grava() {
+  String cp;
+  cp = ped.getString("cpesso","");
+
+  if (cp=="") {
+   dad.execUpdateSql("Insert into Proc (Num_Spi, Origem, Nome)"+
+    " values ('"+ped.getString("Num_Spi")+"','"+ped.getString("Origem")+"','"+
+     ped.getString("Nome")+")");
+  } else {
+   dad.execUpdateSql("update Proc set Num_Spi='"+ped.getString("Num_Spi")+"',"+
+    "Origem='"+ped.getString("Origem")+"',"+
+    "Nome='"+ped.getString("Nome")+""+
+    " where cpesso="+ped.getString("cpesso"));
+  }
+  ped.on("<hr> Processo atualizado");
+ }
+
+ //***************************//
+ public void menu()  {
+  ped.on("<table border=1 bgcolor=yellow width=100% >");
+  ped.on("<tr>");
+  ped.on("<td HEIGHT=15 align=center><a href=processos.class?op=inicio><b>Consulta</a>");
+  ped.on("<td align=center><a href=processos.class?op=novo><b>Novo Processo</a>");
+  ped.on("<td align=center><a href=processos.class?op=pend><b>Pendentes</a>");
+  ped.on("</table>");
+ }
+
+}
