@@ -5,7 +5,7 @@ on() {
 	$1"
 }
 
-dr="loader servidor aplicacao aplicacaopub"
+dr="loader servidor aplicacao"
 cp=.
 for i in $dr; do
 	cd $i

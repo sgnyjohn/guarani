@@ -1,8 +1,0 @@
-
-#./tifftopnm $1.tif >$1.pbm
-pbmreduce -threshold -value 0.85 4 $1.pbm >$1-r.pbm
-#pnmtojpeg --grayscale --quality=100 $1-r.pbm >$1.jpg
-
-pnmtopng $1-r.pbm >$1.png
-
-gimp $1.png

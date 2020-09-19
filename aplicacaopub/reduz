@@ -1,9 +1,0 @@
-// -dither ordered -dither fs -dither none
-
-/usr/local/bin/djpeg -v -gif -scale 1/8 -outfile $1.gif $1.jpg
-
-/usr/local/bin/djpeg -v -dither ordered -gif -scale 1/8 -outfile $1-ordered.gif $1.jpg
-
-/usr/local/bin/djpeg -v -dither fs -gif -scale 1/8 -outfile $1-fs.gif $1.jpg
-
-/usr/local/bin/djpeg -v -dither none -gif -scale 1/8 -outfile $1-none.gif $1.jpg
