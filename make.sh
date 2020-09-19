@@ -10,7 +10,7 @@ cp=.
 for i in $dr; do
 	cd $i
 	on "COMPILAR $i"
-	dd=../class/sun/$i
+	dd=../classes/sun/$i
 	! test -d $dd && mkdir -p $dd
 	javac -d $dd -cp $cp $(find ./ -name "*.java")
 	cp="$cp:$dd"
