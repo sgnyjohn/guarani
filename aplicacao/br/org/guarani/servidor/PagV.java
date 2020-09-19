@@ -48,7 +48,7 @@ public class PagV extends Pag {
 		String a = x509.getSubjectDN().getName();
 		usu = str.substrAtAt(a,"CN=",",");		
 		Object o = Usuario.get(ped.getSessao().getId(),usu);
-		usuario = (br.org.guarani.bd.usuario)o;//sessao.getUsuario();
+		usuario = (Usuario)o;//sessao.getUsuario();
 		if (usuario==null) {
 			logs.grava("x509","usuario="+usu+"= não validado class Usuario");
 			usu = "?";
