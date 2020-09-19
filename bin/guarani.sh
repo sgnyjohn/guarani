@@ -8,7 +8,8 @@
 
 ret=?
 cmd=?
-test -z $dirLog && dirLog=/var/log
+test -z $dirLog && dirLog=$raiz/logs
+! test -d $dirLog && mkdir -p $dirLog
 
 deb=$3
 maq=$2
@@ -98,10 +99,10 @@ case "$1" in
 	starts)
 		startup$maq
 		while true; do
-			log "START modo seguro: $0 $cmd"
+			log "START modo seguro: $EU $cmd"
 			$cmd
 			ret=$?
-			log "SAIU modo seguro: ret=$ret $0 $cmd"
+			log "SAIU modo seguro: ret=$ret $EU $cmd"
 			dr=$raiz/classes/sun/servidor
 			if test -d $dr; then
 				# se dev e classe do servidor foi compilada ultimo minuto
@@ -123,13 +124,13 @@ case "$1" in
 					echo "#PRODUÇÃO, atualização, reinicia"
 				;;
 				143)
-					log "KILL no modo seguro: ret=$ret $0 $cmd"
+					log "KILL no modo seguro: ret=$ret $EU $cmd"
 				;;
 					*)
 				;;
 			esac
 		done
-		log "FIM modo seguro: ret=$ret $0 $cmd"
+		log "FIM modo seguro: ret=$ret $EU $cmd"
 	;;
 	start)
 		pid
@@ -139,17 +140,17 @@ case "$1" in
 		fi
 		echo "Iniciando Guarani!!"
 		if [ $seg -eq 1 ]; then
-			log "INI modo seguro: $0 $maq"
-			$0 starts $maq &
+			log "INI modo seguro: $EU $maq"
+			$EU starts $maq &
 		else
 			startup$maq
-			log "INI modo normal: $0 $cmd"
+			log "INI modo normal: $EU $cmd"
 			#ead
 			$cmd &
 		fi
 	;;
 	stop)
-		log "STOP script: $0"
+		log "STOP script: $EU"
 		stop
 	;;
 	restart)

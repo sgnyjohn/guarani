@@ -33,7 +33,7 @@ fi
 
 raiz=$(dirname $(dirname $(realpath $0)))
 raiz="$(dirname $(cd "$(dirname "$0")";pwd))"
-
+EU="$(cd "$(dirname "$0")"; pwd)/$(basename "$0")"
 
 # carrega cpj=classes jar
 # carrega maquina versao
