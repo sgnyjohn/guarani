@@ -58,7 +58,7 @@ startupsun() {
 	fi
 
 	if [ ".$CLASSPATH" == "." ]; then
-		export CLASSPATH=$sunClass:$raiz/bin/pacotes/mail.jar
+		export CLASSPATH=$sunClass
 	fi
 	#$raiz/lib/mm.mysql-2.0.14-bin.jar:
 

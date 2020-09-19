@@ -5,14 +5,14 @@ on() {
 	$1"
 }
 
-! test -d ./class && mkdir class
-
 dr="loader servidor aplicacao aplicacaopub"
-
+cp=.
 for i in $dr; do
 	cd $i
 	on "COMPILAR $i"
-	javac -d ../class/ -cp ../class/ $(find ./ -name "*.java")
+	! test -d ../class/$i && mkdir -p ../class/$i
+	javac -d ../class/$i -cp $cp $(find ./ -name "*.java")
+	cp="$cp:../class/$i"
 	if [ $? -ne 0 ]; then
 		on "ERROR"
 		exit
