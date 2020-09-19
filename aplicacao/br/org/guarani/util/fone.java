@@ -4,9 +4,6 @@ import java.util.*;
 import java.io.*;
 
 import br.org.guarani.servidor.*;
-import br.org.guarani.bd.*;
-import bd.*;
-
 
 //***************************************
 //***************************************
