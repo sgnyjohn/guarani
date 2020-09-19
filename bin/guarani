@@ -31,12 +31,14 @@ if [ "$USER" != "$user" ]; then
 fi
 
 
-raiz=/home/signey/prg
+raiz=$(dirname $(dirname $(realpath $0)))
+raiz="$(dirname $(cd "$(dirname "$0")";pwd))"
+
+
 # carrega cpj=classes jar
 # carrega maquina versao
-. $raiz/java/compConfig.sh
-
-
+x=$raiz/java/compConfig.sh
+test -e $x && . $x
 
 conf=$raiz/bin/loader.xml
 
