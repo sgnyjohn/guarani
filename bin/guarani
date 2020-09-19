@@ -29,24 +29,26 @@ if [ "$USER" != "$user" ]; then
 	exit
 fi
 
-
-raiz=$(dirname $(dirname $(realpath $0)))
 raiz="$(dirname $(cd "$(dirname "$0")";pwd))"
-EU="$(cd "$(dirname "$0")"; pwd)/$(basename "$0")"
+EU="$raiz/$(basename "$0")"
 
 # carrega cpj=classes jar
 # carrega maquina versao
 x=$raiz/java/compConfig.sh
-test -e $x && . $x
+if test -e $x; then
+	. $x
+	sun="/usr/local/javag/bin/java"
+	sun=$javaDev
+else
+	sun=java
+	if test -d $raiz/lib; then
+		for i in $raiz/lib/*.jar; do
+			cpj="$cpj:$i"
+		done
+	fi
+fi
 
 conf=$raiz/bin/loader.xml
-
-#maq
-sun="/usr/local/javag/bin/java"
-sun=$javaDev
-export JAVA_HOME=$(dirname $(dirname $sun))
-echo "JAVA_HOME=$JAVA_HOME"
-#read
 
 #lixo - sunOp="-Djavax.net.ssl.trustStore" 
 sunOp="-Xmx1024m"
@@ -59,20 +61,9 @@ porta=8080
 #export LD_LIBRARY_PATH=/usr/local/xapian/lib:$LD_LIBRARY_PATH
 
 #classpath
-if [ 1 -eq 1 ]; then
-	export CLASSPATH=$sunClass:$cpj
-	#for i in $raiz/bin/pacotes/*.jar; do
-	#	export CLASSPATH=$CLASSPATH:$i
-	#done
-	echo "===> $CLASSPATH"
-	#read
-else
-	export CLASSPATH=$sunClass:$raiz/bin/pacotes/mail.jar
-	export CLASSPATH=$sunClass:$raiz/bin/pacotes/mysql.jar
-	export CLASSPATH=$CLASSPATH:$raiz/bin/pacotes/xapian/xapian_jni.jar:$raiz/bin/pacotes/lucene-core-3.4.0.jar
-	export CLASSPATH=$CLASSPATH:$raiz/bin/pacotes/apache-math.jar
-	export CLASSPATH=$sunClass:$raiz/bin/pacotes/sqlite-jdbc-3.19.3.jar
-fi
+export CLASSPATH=$sunClass:$cpj
+echo "===> $CLASSPATH"
+#read
 
 
 #LANG=pt_BR.UTF-8
