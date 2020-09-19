@@ -5,7 +5,6 @@ import java.io.*;
 
 import br.org.guarani.servidor.*;
 import br.org.guarani.util.*;
-import pwwws.*;
 
 import br.org.guarani.loader.opcaoC;
 

@@ -1,0 +1,75 @@
+package bd;
+import java.sql.*;
+import java.util.*;
+
+import br.org.guarani.servidor.*;
+import br.org.guarani.util.*;
+
+
+/**
+	* Write a description of class DadosSet here.
+	*
+	* @author signey
+	* @version jul/2001
+	*/
+public interface DadosSet {
+	public ResultSet rs = null;
+	//ResultSet rs;
+	//Pedido ped;
+	//public boolean erro;
+	//****************************************
+	public boolean fim();
+	//****************************************
+	public String sql();
+	//****************************************
+	public boolean absolute(int reg);
+	//****************************************
+	public int nRegs();
+	//****************************************
+	public boolean mostra(Pedido ped);
+	//****************************************
+	public boolean mostra(String atalho,String op);
+	//****************************************
+	public boolean next();
+	//****************************************
+	public double getDuplo(String s);
+	//****************************************
+	public double getDuplo(int s);
+	//****************************************
+	public java.sql.Timestamp getDateTime(String s);
+	//****************************************
+	public java.sql.Date getDate(String s);
+	//****************************************
+	public long getLongo(String s);
+	//****************************************
+	public long getLongo(int s);
+	//****************************************
+	public int getInteiro(String s);
+	//****************************************
+	public int getInteiro(int s);
+	//****************************************
+	public String getString(String s);
+	//****************************************
+	public String getString(String s,String s1);
+	//****************************************
+	public String getString(int pos);
+	//****************************************
+	public boolean close();
+	//****************************************
+	public boolean erro();
+	//****************************************
+	public void erro(String s, Exception e);
+	//****************************************
+	//public void RsMd();
+	//****************************************
+	public int contaCampos();
+	//****************************************
+	public Hashtable getHashtable();
+	//****************************************
+	public String[] getVetor();
+	//****************************************
+	public String getNomeCampo(int i);
+	//****************************************
+	//public void estru();
+}
+

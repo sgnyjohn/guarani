@@ -1,0 +1,349 @@
+package bd;
+
+/**
+	* Interface para acesso a base de Dados
+	*
+	* @author signey
+	* @version jul/2001
+	* cliodbc em jun/2002
+
+14:00:38 * teste172.27.79.146Mozilla/4.0 (compatible; MSIE 5.0; Windows 98; DigExt)1036083638100
+
+	*/
+
+import java.util.*;
+import java.sql.*;
+
+import br.org.guarani.servidor.*;
+import br.org.guarani.util.*;
+
+//import bd.tabela.campo.*;
+
+public class Dados {
+	protected static Hashtable cfg=null;
+	protected static Connection vCon[];
+	protected static String sCon[][];
+
+	//aponta para conex ativa
+	protected int nCon;
+	protected cliOdbc DB=null;
+	protected boolean odbc=false;
+
+	public String nome,nomeInterno;
+	//adm dados
+ 
+	public Pedido ped;
+	//protected Connection oCon=null;
+	//protected String sCon[] = null;
+	//protected Statement stmt;
+	//ResultSet rs;
+	public boolean erro = false;
+	public String sErro = "";
+	/* ****************************************
+	public static String subst(String sql,String v[],CampoPadrao campos[]) {
+		for (int i=0;i<v.length;i++) {
+			if (v[i]==null) {
+				sql = str.troca(sql,"'{"+i+"}'","null");
+			} else {
+				sql = str.troca(sql,"{"+i+"}",v[i]);
+			}
+		}
+		return sql;
+	}
+	//*****************************************
+	public int executeUpdate(String sql,String v[],CampoPadrao campos[]) {
+		return execUpdateSql(subst(sql,v,campos));
+	}
+	*/
+ 
+	//*****************************************//
+	public Connection oConn() {
+		return vCon[nCon];
+	}
+	//*****************************************//
+	public void putCfg() {
+		putCfg(Guarani.cnf_jdbc);
+	}
+	//*****************************************//
+	public Dados(Pedido pd,String Base) {
+		ped = pd;
+		init(Base);
+	}
+	//*****************************************//
+	public Dados() {
+		ped = null;
+	}
+	//*****************************************//
+	public Dados(String Base) {
+		ped = null;
+		init(Base);
+	}
+	//*****************************************//
+	public void setPed(Pedido pd) {
+		ped = pd;
+	}
+	//*****************************************//
+	protected void init(String Base) {
+		if (cfg==null) putCfg();
+		String n = (String)cfg.get(Base.toLowerCase());
+		/*if (n==null) {
+			n = (String)cfg.get("*");
+			if (n!=null) {
+				
+			}
+		}
+		*/
+		if (n==null) {
+			erro(Base+", Base não definida!!",new Exception());
+		} else {
+			nCon = Integer.parseInt(n);
+			if (sCon[nCon][0].equals("bd.cliOdbc")) {
+				odbc = true;
+				DB = new cliOdbc(ped);
+				//ped.on(sCon[nCon][1]+"="+sCon[nCon][2]);
+				if (!DB.conecta(sCon[nCon][1],sCon[nCon][2])) {
+					logs.grava("jdbc","cliOdbc:"+sCon[nCon][1]+" "+sCon[nCon][2]+" "+DB.sErro);
+					sErro = DB.sErro;
+					erro = true;
+				}
+			} else {
+				conecta();
+				nome = Base;
+				nomeInterno = str.substrRatAt(sCon[nCon][1],"/","?");
+			}
+		}
+	}
+	//*****************************************//
+	public DadosSet executeQuery(String sql,String v[]) {
+		return execSql(subst(sql,v));
+	}
+	//*****************************************//
+	public DadosSet executeQuery(String sql) {
+		return execSql(sql);
+	}
+	//*****************************************//
+	private DadosSet execSql(String sql) {
+		sErro = null;
+		erro = false;
+		if (odbc) {
+			if (!DB.executeQuery(sql)) {
+				sErro = DB.sErro;
+				erro = true;
+				return null;
+			} else {
+				return DB;
+			}
+		}
+ 
+		//if (!conecta()) return null;
+		ResultSet rs;
+		Statement stmt;
+
+		try {
+			//logs.grava("CRIANDO STMT...");
+			stmt = vCon[nCon].createStatement(
+				//ResultSet.TYPE_FORWARD_ONLY, //não funciona no mysql.???
+				ResultSet.TYPE_SCROLL_INSENSITIVE, //ignora alterações 
+					//de outros enquanto avança
+				ResultSet.CONCUR_READ_ONLY //não aceita alteração
+			);
+		} catch (SQLException e) {
+			erro("createStatement="+sql,e);
+			return null;
+		}
+  
+		try {
+			//logs.grava("jdbc","execSql="+sql);
+			rs = stmt.executeQuery(sql);
+			//logs.grava("jdbc","execSql-fim="+rs);
+		} catch (SQLException e) {
+			erro("executeQuery="+sql,e);
+			return null;
+		}
+
+		return new DadosSetJdbc(ped,rs);
+	}
+	//*****************************************//
+	public static String subst(String sql,String v[]) {
+		for (int i=0;i<v.length;i++) {
+			if (v[i]==null) {
+				sql = str.troca(sql,"'{"+i+"}'","null");
+			} else {
+				if (v[i].indexOf("'")!=-1) {
+					v[i] = str.troca(v[i],"'","\\'");
+				}
+				sql = str.troca(sql,"{"+i+"}",v[i]);
+			}
+		}
+		return sql;
+	}
+	//*****************************************//
+	public int executeUpdate(String sql,String v[]) {
+		return execUpdateSql(subst(sql,v));
+	}
+	//*****************************************//
+	public int executeUpdate(String sql) {
+		return execUpdateSql(sql);
+	}
+	//*****************************************//
+	private int execUpdateSql(String sql) {
+		erro = false;
+		sErro = null;
+		//if (!conecta()) return -1;
+		if (odbc) {
+			return DB.executeUpdate(sql);
+		}
+
+		Statement stmt;
+
+		try {
+			stmt = vCon[nCon].createStatement();
+		} catch (SQLException e) {
+			erro("createStatement="+sql,e);
+			return -1;
+		}
+
+		try {
+			return stmt.executeUpdate(sql);
+		} catch (Exception e) {
+			erro("executeUpdate="+sql,e);
+			return -1;
+		}
+	}
+	//*****************************************//
+	static private synchronized boolean conecta1(Dados dl,int nCon) {
+		boolean r = vCon[nCon]!=null;
+		if (!r) {
+			try {
+				Class.forName(sCon[nCon][0]).newInstance();
+				logs.grava("jdbc","Vai "+((vCon[nCon]==null)?"":"RE")+
+					"Conectar "+sCon[nCon][0]+" ~ "+str.leftAt(sCon[nCon][1],"?")+
+					" "+vCon[nCon]);
+				vCon[nCon] = DriverManager.getConnection(sCon[nCon][1]);
+
+				//org.gjt.mm.mysql.Driver dr;
+     
+				/*
+				String url=str.leftAt(sCon[nCon][1],"?");
+				String us=str.substrAtAt(sCon[nCon][1],"user=","&");
+				String ps=str.substrAtAt(sCon[nCon][1]+"&","password=","&");
+				Properties p = new Properties();
+				p.setProperty("user", us);
+				if (!str.vazio(ps)) {
+					p.setProperty("password", ps);
+				}
+				Enumeration e = DriverManager.getDrivers();
+				Driver d=null;
+				for (Enumeration b=e;b.hasMoreElements();){
+					d = (Driver)b.nextElement();
+				}
+				vCon[nCon] = d.connect(url,p);
+				logs.grava("jdbc","conectou? drv="+d+" con="+vCon[nCon]);
+				*/
+    
+				r = true;
+				//logs.grava("jdbc","Cat="+vCon[nCon].getCatalog());
+			} catch (Exception e) {
+				dl.erro("ERRO: conecta=",e);
+			}
+		}
+  
+		return r;
+	}
+	//*****************************************//
+	private boolean conecta0() {
+		boolean r = false;
+		try {
+			if (vCon[nCon] != null) {
+				if (!vCon[nCon].isClosed()) {
+					r = true;
+				} else {
+					logs.grava("jdbc","c0: é closed!!"+nCon);
+					vCon[nCon] = null;
+				}
+			}
+		} catch (SQLException se) {
+			try {
+				vCon[nCon].close();
+			} catch (Exception e) {
+				erro("recuperável conecta oCon.close",e);
+				erro = false;
+			}
+		}
+		return r;
+	}
+	//*****************************************//
+	private boolean conecta() {
+		//boolean r = false;
+		boolean r = conecta0();
+		if (!r) {
+			//vCon[nCon] = null;
+			r = conecta1(this,nCon);
+		}
+		erro = !r;
+		return r;
+	}
+	//*****************************************//
+	public boolean close() {
+		if (odbc && DB!=null) {
+			DB.close();
+		}
+		return true;
+	}
+	//****************************************
+	public void erro(String s, Exception e) {
+		erro = true;
+		sErro = s+"\r\n"+e;
+		//s = "Dados.class "+s+" "+sCon[nCon][0]+" "+sCon[nCon][1];
+		logs.grava("jdbc",s+"<hr>"+e);
+		if (ped!=null) {
+			ped.erro(s,e);
+		}
+	}
+	//*****************************************//
+	public static synchronized void putCfg(Object o) {
+		if (cfg!=null) return;
+		if (Guarani.get("dados.cfg")!=null) {
+			try {
+				cfg = (Hashtable)Guarani.get("dados.cfg");
+				vCon = (Connection[])Guarani.get("dados.vCon");
+				sCon = (String[][])Guarani.get("dados.sCon");
+				logs.grava("jdbc","jdbc->Recuperada conexcoes...");
+				return;
+			} catch (Exception e) {
+				logs.grava("jdbc","jdbc->Erro recuperando de gurani="
+					+str.erro(e)
+				);
+			}
+		}
+		logs.grava("jdbc","init cfg!!");
+		Hashtable cg = new Hashtable();
+		Hashtable c = (Hashtable)o;
+		int i = c.size();
+		vCon = new Connection[i];
+		sCon = new String[i][];
+		String k;
+		int pos=0;
+		//logs.grava("aa"+c);
+		for (Enumeration e = c.keys() ; e.hasMoreElements() ;) {
+			k = (String)e.nextElement();
+			logs.grava("jdbc","jdbc==>"+k); //+"="+c.get(k));
+			//cfg.put(k.toLowerCase(),new Object[]{c.get(k),null});
+			cg.put(k.toLowerCase(),""+pos);
+			vCon[pos] = null;
+			sCon[pos] = str.palavraA((String)c.get(k),"~");
+			try {
+				Class.forName(sCon[pos][0]).newInstance();
+			} catch (Exception ee) {
+				logs.grava("jdbc","JDBC Classe não existe: "+sCon[pos][0]);
+			}
+			pos++;
+		}
+		cfg = cg;
+		//guarda em guarani para em caso de recompilação não ficarem 
+		//perdidas...
+		Guarani.put("dados.cfg",cfg);
+		Guarani.put("dados.vCon",vCon);
+		Guarani.put("dados.sCon",sCon);
+	}
+}

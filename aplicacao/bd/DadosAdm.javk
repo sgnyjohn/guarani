@@ -1,0 +1,42 @@
+package bd;
+
+/**
+* Interface para acesso a base de Dados
+*
+* @author signey
+* @version mai/2002
+*/
+
+import java.util.*;
+import java.sql.*;
+import br.org.guarani.servidor.*;
+import br.org.guarani.util.*;
+
+
+public class DadosAdm extends Dados {
+	private DatabaseMetaData dmd=null;
+ 
+	//*****************************************
+	public DatabaseMetaData getMetaData() {
+		if (dmd!=null) {
+			return dmd;
+		}
+		try {
+			dmd = vCon[nCon].getMetaData();
+		} catch (Exception e) {
+			sErro = "DadosAdm: getMetaData()="+e;
+			erro = true;
+			return null;
+		}
+		return dmd;
+	}
+
+	//*****************************************
+	public DadosAdm(Pedido pd,String Base) {
+		//super.Dados(ped,s);
+		ped = pd;
+		init(Base);
+	}
+ 
+ 
+}

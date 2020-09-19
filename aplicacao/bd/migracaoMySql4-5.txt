@@ -1,0 +1,5 @@
+
+data=''
+
+
+SELECT PessoaP.C_PessoaP, PessoaPCargo.PessoaPCargo , PessoaP.C_Pessoa1, Pessoa.Pessoa, Pessoa.C_PessoaTipo, Pessoa.C_Pessoa, PessoaP.Funcao , PessoaP.Dad, PessoaP.C_PessoaPCargo, Mun.Mun FROM PessoaP, Pessoa, PessoaTipo, MunUF, Mun, PessoaPCargo WHERE PessoaP.C_Pessoa=1 and (Fim='' OR Fim>=CURRENT_DATE()) AND (Inicio='' OR Inicio<=CURRENT_DATE()) AND PessoaP.C_Pessoa <> PessoaP.C_Pessoa1 AND PessoaP.C_Pessoa1 = Pessoa.C_Pessoa AND Pessoa.C_PessoaTipo = PessoaTipo.C_PessoaTipo AND Pessoa.C_Mun = Mun.C_Mun AND Mun.C_MunUF = MunUF.C_MunUF AND PessoaP.C_PessoaPCargo = PessoaPCargo.C_PessoaPCargo ORDER BY PessoaPCargo.Prioridade desc,Pessoa.Pessoa

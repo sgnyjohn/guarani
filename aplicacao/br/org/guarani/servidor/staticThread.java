@@ -16,7 +16,7 @@ import java.lang.*;
 
 import br.org.guarani.servidor.*;
 import br.org.guarani.util.*;
-import pwwws.*;
+//import pwwws.*;
 
 //***************************
 public abstract class staticThread implements Runnable {
