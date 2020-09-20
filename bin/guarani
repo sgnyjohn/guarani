@@ -32,7 +32,7 @@ fi
 raiz="$(dirname $(cd "$(dirname "$0")";pwd))"
 EU="$raiz/bin/$(basename "$0")"
 echo "raiz=$raiz EU=$EU"
-read
+
 
 # carrega cpj=classes jar
 # carrega maquina versao

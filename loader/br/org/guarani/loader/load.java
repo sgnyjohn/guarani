@@ -35,7 +35,7 @@ class load {
 	static String compil[];
 	private static ClassLoader clB;
 
-	static opcaoC opC;
+	static loaderConf opC;
 	static arquivoL arq;
 	//**************************************************************
 	static void initVars() {
@@ -404,13 +404,11 @@ class load {
 		///////////////////////////////////////////////////////////////////////
 		// sendo GCJ ou não
 		// verifica integridade VM - arquivo gcj desatualizado inclusive
-		opC = new opcaoC();
-		if (sun) {
-			nomePrg = strL.leftRat(a[0],"/")+"/guarani.bin";
-		}
+		opC = new loaderConf();
+		nomePrg = ""+aCfg;
 		on(nomePrg+" - Maq sun?:"+sun+" "+System.getProperty("gnu.gcj.progname"));
-		if (!opC.initA(nomePrg+(arquivoL.dev()?"_Ass":""))) {
-			on("Pacote corrompido..."+nomePrg);
+		if (!opC.init((xmlTagL)cfg.getCh("config"))) {
+			on("erro no arquivo de configuração..."+nomePrg);
 			System.exit(10);
 		}
 		
