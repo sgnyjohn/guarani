@@ -8,9 +8,9 @@ on() {
 dr="loader servidor aplicacao"
 cp=.
 for i in $dr; do
-	cd $i
+	cd java/$i
 	on "COMPILAR $i"
-	dd=../classes/sun/$i
+	dd=../../classes/sun/$i
 	! test -d $dd && mkdir -p $dd
 	javac -d $dd -cp $cp $(find ./ -name "*.java")
 	cp="$cp:$dd"
@@ -18,5 +18,5 @@ for i in $dr; do
 		on "ERROR"
 		exit
 	fi
-	cd ..
+	cd ../..
 done
