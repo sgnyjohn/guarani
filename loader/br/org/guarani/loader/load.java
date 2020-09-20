@@ -412,7 +412,7 @@ class load {
 			System.exit(10);
 		}
 		
-		String id = opC.get("wwws.cop").toString();
+		String id = opC.get("version").toString();
 		on("tam="+id.length());
 	
 		arq = new arquivoL(id);

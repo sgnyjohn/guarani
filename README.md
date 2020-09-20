@@ -1,2 +1,2 @@
 # guarani
-servidor pessoal 
+plataforma pessoal 
