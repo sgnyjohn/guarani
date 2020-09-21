@@ -16,7 +16,7 @@ import java.nio.charset.Charset;
 //**************************************************************
 //**************************************************************
 class load {
-	static String raiz = "/home/signey/prg";
+	public static String raiz = ".";
 	public static String jvm;
 	public static boolean sun;
 	public static String so;
@@ -346,6 +346,9 @@ class load {
 	protected load(String a[]) {
 		//on("load, núm parametros: "+a.length);
 		aCfg = new File(a[0]);
+		raiz = a[0].substring(0,a[0].lastIndexOf("/"));
+		//dir ant
+		raiz = raiz.substring(0,raiz.lastIndexOf("/"));
 		
 		param = new String[a.length-1];
 		for (int i=1;i<a.length;i++) {
