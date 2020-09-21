@@ -100,8 +100,10 @@ case "$1" in
 		startup$maq
 		while true; do
 			log "START modo seguro: $EU $cmd"
-			$cmd
 			ret=$?
+			tt=$(date +%s)
+			$cmd
+			let tt=$(date +%s)-$tt
 			log "SAIU modo seguro: ret=$ret $EU $cmd"
 			dr=$raiz/classes/sun/servidor
 			if test -d $dr; then
@@ -126,7 +128,11 @@ case "$1" in
 				143)
 					log "KILL no modo seguro: ret=$ret $EU $cmd"
 				;;
-					*)
+				*)
+					if [ $tt -le 10 ]; then
+						log "abort start seguro, menos 10 segundos"
+						break
+					fi
 				;;
 			esac
 		done

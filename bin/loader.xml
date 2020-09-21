@@ -1,0 +1,52 @@
+<Loader charset="UTF-8" debug="0" language="pt" country="BR" root="">
+	
+	<config
+		version="loaderVersion"
+		
+	
+	</config>
+	
+	<compil 
+		cmd="[raiz]/bin/compil-[mq]"
+	/>
+
+	<xml root="">
+		<file file="Loader.xml" onUpdate="restart"/>
+	</xml>
+
+	<class>
+		
+		<class
+			pathx="[raiz]/lib/mm.mysql-2.0.14-bin.jar"
+		/>
+		
+		<class
+			path="[raiz]/classes/sun/servidor"
+			pathJava_0="[raiz]/java/servidor"
+			onChange="restart"
+			thread="br.org.guarani.servidor.Guarani"
+			param_0="[raiz]/bin/guarani-[mq].conf"
+			param_1="."
+		/>
+		
+		<class
+			path="[raiz]/classes/sun/aplicacao"
+			pathJava_0="[raiz]/java/aplicacao"
+			pathJava_1="[raiz]/java/aplicacaopub"
+			pathJava_2="[raiz]/java/aplicacaodev"
+			pathJava_3="[raiz]/java/casa"
+		/>
+	</class>
+	
+	<resource>
+		<resource path="[raiz]/resources">
+		</resource>
+	</resource>
+
+	<image root="">
+	</image>
+	
+	<javascript root="">
+	</javascript>
+
+</Loader>
