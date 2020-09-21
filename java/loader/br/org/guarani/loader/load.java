@@ -396,6 +396,9 @@ class load {
 	// p2 parametros classe a ser carregada
 	//**************************************************************
 	public static void main(String a[]) {
+		//System.out.println("sair com 11");
+		//System.exit(11);
+		
 		//TESTA CLASSPATH válido
 		//gnu.gcj.runtime.VMClassLoader.library_control=false;
 		//gnu.classpath.home.url // gnu.classpath.vm.shortname // java.library.path // gnu.classpath.home

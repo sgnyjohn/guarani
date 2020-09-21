@@ -63,8 +63,8 @@ startupsun() {
 	#$raiz/lib/mm.mysql-2.0.14-bin.jar:
 
 	cmd="$sun $sunOp -cp $CLASSPATH br.org.guarani.loader.load $conf $deb"
-	ret=$?
-	echo "result=$ret"
+	#ret=$?
+	#echo "result=$ret"
 }
 #########################
 startupgcj() {
@@ -97,20 +97,20 @@ case "$1" in
 		status
 	;;
 	starts)
+	
 		startup$maq
 		while true; do
 			log "START modo seguro: $EU $cmd
 			===================================================================="
-			ret=$?
 			tt=$(date +%s)
 			$cmd
-			let tt=$(date +%s)-$tt
+			ret=$?
+			let tt=$(date +%s)-tt
 			log "====================================================================
 			SAIU modo seguro: ret=$ret" # $EU $cmd"
 			dr=$raiz/classes/sun/servidor
 			if test -d $dr; then
 				# se dev e classe do servidor foi compilada ultimo minuto
-				ret=0
 				#echo "===>> $dr"
 				#read
 				if [ "$(find $dr/ -mmin -1)" != "" ]; then
