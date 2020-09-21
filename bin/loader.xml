@@ -2,9 +2,7 @@
 	
 	<config
 		version="loaderVersion"
-		
-	
-	</config>
+	/>
 	
 	<compil 
 		cmd="[raiz]/bin/compil-[mq]"

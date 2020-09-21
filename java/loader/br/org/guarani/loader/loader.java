@@ -151,6 +151,7 @@ class loader extends ClassLoader {
 		//java.lang.LinkageError: duplicate class definition: br/org/guarani/servidor/vUsu
 		Class r = null;
 		if (f.exists()) {
+			//System.out.println("load.arq: "+load.arq);
 			byte b[] = load.arq.carrega(f);
 			logsL.deb(1,"carregou: "+f);
 			try {

@@ -99,17 +99,19 @@ case "$1" in
 	starts)
 		startup$maq
 		while true; do
-			log "START modo seguro: $EU $cmd"
+			log "START modo seguro: $EU $cmd
+			===================================================================="
 			ret=$?
 			tt=$(date +%s)
 			$cmd
 			let tt=$(date +%s)-$tt
-			log "SAIU modo seguro: ret=$ret $EU $cmd"
+			log "====================================================================
+			SAIU modo seguro: ret=$ret" # $EU $cmd"
 			dr=$raiz/classes/sun/servidor
 			if test -d $dr; then
 				# se dev e classe do servidor foi compilada ultimo minuto
 				ret=0
-				echo "===>> $dr"
+				#echo "===>> $dr"
 				#read
 				if [ "$(find $dr/ -mmin -1)" != "" ]; then
 					ret=77
@@ -136,7 +138,7 @@ case "$1" in
 				;;
 			esac
 		done
-		log "FIM modo seguro: ret=$ret $EU $cmd"
+		log "FIM modo seguro: ret=$ret" # $EU $cmd"
 	;;
 	start)
 		pid

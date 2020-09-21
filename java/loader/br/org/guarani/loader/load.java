@@ -16,6 +16,7 @@ import java.nio.charset.Charset;
 //**************************************************************
 //**************************************************************
 class load {
+	static String raiz = "/home/signey/prg";
 	public static String jvm;
 	public static boolean sun;
 	public static String so;
@@ -206,7 +207,9 @@ class load {
 		if (r==null) {
 			return r;
 		}
-		return strL.troca(r,"[mq]",(load.sun?"sun":"gcj"));
+		if (r.indexOf("[raiz]")!=-1) r = strL.troca(r,"[raiz]",raiz);
+		if (r.indexOf("[mq]")!=-1) r = strL.troca(r,"[mq]",load.sun?"sun":"gcj");
+		return r;
 	}
 	//**************************************************************
 	private String verifPath(String p) {
@@ -220,7 +223,7 @@ class load {
 		String er;
 		for (int i=0;i<cfg.size();i++) {
 			xmlTagL x = cfg.get(i);
-			String ph = x.getAtr("path");
+			String ph = load.conf(x,"path");
 			//n("=="+ph+" "+x.nome+" "+verifPath(ph)+" "+x.atr);
 			if ("-resource-class-".indexOf("-"+x.nome+"-")!=-1 && ph!=null && (er = verifPath(ph))!=null  ) {
 				on("ERRO: path em "+x.nome+" "+er);
@@ -249,6 +252,12 @@ class load {
 		if (cfg==null) {
 			on("ERRO cfg sem tag Loader: "+aCfg);
 		}
+		
+		//init class loader
+		arq = new arquivoL(null);
+
+		//init conf cliente
+		initConf();
 
 		//default LOCALE
 		charset = (String)cfg.getAtr("charset","UTF-8");
@@ -344,6 +353,42 @@ class load {
 		}
 	}
 	//**************************************************************
+	boolean initConf() {
+		///////////////////////////////////////////////////////////////////////
+		// sendo GCJ ou não
+		// verifica integridade VM - arquivo gcj desatualizado inclusive
+		opC = new loaderConf();
+		nomePrg = ""+aCfg;
+		on(nomePrg+" - Maq sun?:"+sun+" "+System.getProperty("gnu.gcj.progname")
+			+" cfg="+cfg//.getCh("config")
+			+" opC="+opC
+		);
+		if (!opC.init((xmlTagL)cfg.getCh("config"))) {
+			on("erro no arquivo de configuração..."+nomePrg);
+			System.exit(10);
+		}
+		
+		/*String id = opC.get("version").toString();
+		on("tam="+id.length());
+	
+		arq = new arquivoL(id);
+		
+		a[0] = strL.trimm(a[0]);
+		if (a.length<1) {
+			on("ERRO: parametro 1 é arq xml config...");
+			System.exit(1);
+		}
+		if (!(new File(a[0])).exists()) {
+			on("ERRO: parametro 1 xml config "+a[0]+" não existe!");
+			on("Sair 1");
+			System.exit(1);
+		}
+		*/
+
+		return true;
+	}
+
+	//**************************************************************
 	// p1 arquivo conf
 	// p2 parametros classe a ser carregada
 	//**************************************************************
@@ -381,7 +426,6 @@ class load {
 		initVars();
 		on("JVM="+jvm);
 
-
 		// se GCJ
 		String v[] = strL.palavraA("java.library.path~java.class.path~java.home~gnu.classpath.home.url~gnu.classpath.home","~");
 		for (int i=0;!load.sun && i<v.length;i++) {
@@ -399,34 +443,6 @@ class load {
 			}
 			//System.setProperty(v[i],"...\n...");
 			//on(v[i]+"="+System.getProperty(v[i]));
-		}
-		
-		///////////////////////////////////////////////////////////////////////
-		// sendo GCJ ou não
-		// verifica integridade VM - arquivo gcj desatualizado inclusive
-		opC = new loaderConf();
-		nomePrg = ""+aCfg;
-		on(nomePrg+" - Maq sun?:"+sun+" "+System.getProperty("gnu.gcj.progname"));
-		if (!opC.init((xmlTagL)cfg.getCh("config"))) {
-			on("erro no arquivo de configuração..."+nomePrg);
-			System.exit(10);
-		}
-		
-		String id = opC.get("version").toString();
-		on("tam="+id.length());
-	
-		arq = new arquivoL(id);
-		
-		
-		a[0] = strL.trimm(a[0]);
-		if (a.length<1) {
-			on("ERRO: parametro 1 é arq xml config...");
-			System.exit(1);
-		}
-		if (!(new File(a[0])).exists()) {
-			on("ERRO: parametro 1 xml config "+a[0]+" não existe!");
-			on("Sair 1");
-			System.exit(1);
 		}
 		
 		//Inicia
@@ -465,7 +481,7 @@ class load {
 	}
 	//**************************************************************
 	static void on(String n) {
-		System.out.println(n);
+		System.out.println("====>>>>	"+n);
 	}
 	/*************************************/
 	private static String exec(String a,String b[]) {
