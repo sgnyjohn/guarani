@@ -23,7 +23,7 @@ echo "maq=$maq"
 #sun="$sun -verbosegc"
 #sun="/usr/local/jdk1.6.0_04/jre/bin/java  -Xmx512m -verbosegc"
 gcj="$raiz/bin/guarani.bin"
-cd $raiz/bin
+cd $raiz	#/bin
 
 #######################################################
 status() {
@@ -78,7 +78,7 @@ startupgcj() {
 	#/tmp/ssl
 	#$raiz/lib/mm.mysql-2.0.14-bin.jar
 	
-	cd $raiz/bin
+	cd $raiz	#/bin
 	cmd="$gcj $conf $deb"
 	ret=$?
 	echo "result=$ret"

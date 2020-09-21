@@ -6,6 +6,7 @@ on() {
 }
 
 dr="loader servidor aplicacao"
+mkdir resources
 cp=.
 for i in $dr; do
 	cd java/$i
