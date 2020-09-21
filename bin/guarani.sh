@@ -131,12 +131,12 @@ case "$1" in
 					log "KILL no modo seguro: ret=$ret $EU $cmd"
 				;;
 				*)
-					if [ $tt -le 10 ]; then
-						log "abort start seguro, menos 10 segundos"
-						break
-					fi
 				;;
 			esac
+			if [ $tt -le 10 ]; then
+				log "abort start seguro, menos 10 segundos - ret=$ret"
+				break
+			fi
 		done
 		log "FIM modo seguro: ret=$ret" # $EU $cmd"
 	;;
