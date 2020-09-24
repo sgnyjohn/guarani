@@ -218,16 +218,23 @@ class load {
 		return (new File(p)).exists()?null:"path not exists: "+p;
 	}
 	//**************************************************************
-	private boolean verifCfg(xmlTagL cfg) {
+	private boolean verifPaths(xmlTagL cfg) {
 		boolean c = true;
 		String er;
 		for (int i=0;i<cfg.size();i++) {
 			xmlTagL x = cfg.get(i);
-			String ph = load.conf(x,"path");
-			//n("=="+ph+" "+x.nome+" "+verifPath(ph)+" "+x.atr);
-			if ("-resource-class-".indexOf("-"+x.nome+"-")!=-1 && ph!=null && (er = verifPath(ph))!=null  ) {
-				on("ERRO: path em "+x.nome+" "+er);
-				c = false;
+			//varre atributos
+			for (Enumeration e = x.atr.keys();e.hasMoreElements();) {
+				String k = (String)e.nextElement();
+				if (k.toLowerCase().indexOf("path")!=-1) {
+					String ph = (String)x.atr.get(k);
+					String ph1 = conf(x,k);
+					if ((er = verifPath(ph1))!=null) {
+						on("ERRO: path em "+x.nome+" "+er);
+						c = false;
+					}
+					x.atr.put(k,ph1);
+				}
 			}
 		}
 		return c;		
@@ -306,7 +313,7 @@ class load {
 		}
 		
 		//consistencia path
-		if (!verifCfg(cfgL) || !verifCfg(cfgR)) {
+		if (!verifPaths(cfgL) || !verifPaths(cfgR)) {
 			on("ERRO(s)");
 			System.exit(1);
 		}		

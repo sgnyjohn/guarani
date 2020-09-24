@@ -50,7 +50,7 @@ class Http extends ProtocoloAbstrato {
 	String www_root;
 	Hashtable www_vdirs=null;
  
-	String dirIgnora[],dirClasse[][];
+	String dirIgnora[],dirClasse[][],naoSessao[];
 	
 	boolean getIsDir = false;
 	boolean https = false;
@@ -83,6 +83,18 @@ class Http extends ProtocoloAbstrato {
 	//********************************
 	public void deb(String s) {
 		logs.grava("debug",s);
+	}
+	//********************************
+	// mpv mplayer não aceitam sessão
+	boolean naoSessao() {
+		if (naoSessao!=null) {
+			for (short i=0;i<naoSessao.length;i++) {
+				if (str.equals(get1,naoSessao[i])) {
+					return true;
+				}
+			}
+		}
+		return false;
 	}
 	//********************************
 	public void run() {
@@ -131,6 +143,8 @@ class Http extends ProtocoloAbstrato {
 				// pode ser usado para cgi... --> dirClasse=/player/=/cgiBash.class
 				if (dirClasse!=null) {
 					for (short i=0;i<dirClasse.length;i++) {
+						// 0="o dir"  1=antes'?' 2=apos'?'
+						//ogs.grava(i+" geto="+geto+" get1="+get1+" d="+dirClasse[i][0]);
 						if (str.equals(get1,dirClasse[i][0])) {
 							int p = get1.indexOf("?");
 							String arg;
@@ -182,22 +196,17 @@ class Http extends ProtocoloAbstrato {
 			String dsv = (String)pd.get("?endereco");
 			x = dsv.indexOf("_GS_");
 			if (sessao==null) {
-				deb("sessao null");
-				//1o acesso
-				try {
-					Thread.sleep(1000);
-				} catch (Exception e) {
+				if (naoSessao()) {
+				} else {
+					deb("sessao null");
+					//1o acesso
+					try {
+						Thread.sleep(1000);
+					} catch (Exception e) {
+					}
+					dsv = (dsv.indexOf("?")==-1 ?dsv+"?" :dsv+"&"+"_GSI_="+data.ms());
+					movTemp(dsv,null);
 				}
-				dsv = (dsv.indexOf("?")==-1 ?dsv+"?" :dsv+"&"+"_GSI_="+data.ms());
-				//l ogs.grava("sessao","sessao=null dsv="+dsv);
-				/*resp(httpVer+" 302 Moved Temporarily");
-				o.print(cabPrg
-					+ "Content-Length: "+movTemp.length()+lf				
-					+"Location: "+dsv+lf
-					+lf+movTemp
-				);
-				*/
-				movTemp(dsv,null);
 			} else if (sessao.nova) {
 				if (x!=-1) {
 					deb("sessao nova -1");
@@ -397,7 +406,7 @@ class Http extends ProtocoloAbstrato {
 	}
 
 	//********************************
-	//inicializa
+	//inicializa - meleca, executa para apenas uma das tarefas...?
 	public void init(Hashtable conf) {
 		//l ogs.grava("***********************http init");
 		rodando = false;
@@ -414,7 +423,7 @@ class Http extends ProtocoloAbstrato {
 
 		permissao = " "+str.seNull((String)cnf.get("permissao"),"*")+" ";
   
-		www_root = Guarani.dir((String)cnf.get("www_root"));
+		www_root = ""+(new File(Guarani.dir((String)cnf.get("www_root")))).getAbsolutePath();
 		String s = (String)cnf.get("www_vdirs");
 		debugp = str.seNull((String)cnf.get("debugp"),"").equals("on");
   
@@ -444,9 +453,10 @@ class Http extends ProtocoloAbstrato {
 		//if (cnf.get("dirClasse")!=null) {
 		//pega da conf geral do Guranai
 		if (Guarani.getCfg("dirClasse")!=null) {
-			String v[] = str.palavraA(""+Guarani.getCfg("dirClasse"),",");
+			String v[] = str.palavraA(str.trocaTudo(str.trimm(""+Guarani.getCfg("dirClasse")),"  "," ")," ");
 			dirClasse = new String[v.length][3];
 			for (short i=0;i<v.length;i++) {
+				//ogs.grava(i+" v="+v[i]);
 				dirClasse[i][0] = str.leftAt(v[i],"=");
 				String dc = str.substrAt(v[i],"=");
 				if (dc.indexOf("?")==-1) {
@@ -456,18 +466,25 @@ class Http extends ProtocoloAbstrato {
 					dirClasse[i][1] = str.leftAt(dc,"?");
 					dirClasse[i][2] = str.substrAt(dc,"?");
 				}
-				//l ogs.grava("**********************"
-				// +dirClasse[i][0]+"="+dirClasse[i][1]);
+				//ogs.grava("**********************"
+				//	+dirClasse[i][0]+"="+dirClasse[i][1]+" 2="+dirClasse[i][2]
+				//);
 			}
 		} else {
 			//l ogs.grava("*******************Dir CLASSE=null");
 		}
 		if (cnf.get("dirIgnora")!=null) {
-			dirIgnora=str.palavraA(""+cnf.get("dirIgnora")," ");
+			dirIgnora=str.palavraA(str.trocaTudo(str.trimm(""+cnf.get("dirIgnora")),"  "," ")," ");
 			for (int i=0;i<dirIgnora.length;i++) {
 				dirIgnora[i] = "/"+str.trimm(dirIgnora[i],"/")+"/";
 			}
 		}
+		if (cnf.get("naoSessao")!=null) {
+			naoSessao=str.palavraA(str.trocaTudo(str.trimm(""+cnf.get("naoSessao")),"  "," ")," ");
+			for (int i=0;i<naoSessao.length;i++) {
+				naoSessao[i] = "/"+str.trimm(naoSessao[i],"/")+"/";
+			}
+		}		
 	}
 	//********************************
 	//seta socket

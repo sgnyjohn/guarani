@@ -15,7 +15,7 @@
 	<class>
 		
 		<class
-			pathx="[raiz]/lib/mm.mysql-2.0.14-bin.jar"
+			paxthx="[raiz]/lib/mm.mysql-2.0.14-bin.jar"
 		/>
 		
 		<class

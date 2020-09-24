@@ -29,9 +29,9 @@ public class cgiBash extends PagV {
 		try {
 			//log("vai exec q="+ped.queryString+" q="+q+" script = "+s);
 			Process pr = Runtime.getRuntime().exec(
-				new String[]{bash,s}
-				,new String[]{"QUERY_STRING="+(str.vazio(q)?"":q.substring(1))}
-				,new File(str.leftRat(s,"/"))
+				new String[]{bash,s} // bash e script
+				,new String[]{"QUERY_STRING="+(str.vazio(q)?"":q.substring(1))} //query
+				,new File(str.leftRat(s,"/")) //dir exec
 			);
 			String l="",line;
 			int nl = 0;
