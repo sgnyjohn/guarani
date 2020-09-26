@@ -30,9 +30,6 @@
 		<class
 			path="[raiz]/classes/sun/aplicacao"
 			pathJava_0="[raiz]/java/aplicacao"
-			pathJava_1="[raiz]/java/aplicacaopub"
-			pathJava_2="[raiz]/java/aplicacaodev"
-			pathJava_3="[raiz]/java/casa"
 		/>
 	</class>
 	

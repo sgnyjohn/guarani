@@ -2,7 +2,7 @@
 # -Djavax.net.ssl.trustStore
 
 # autorizar o java a abrir a porta nro baixo
-sudo setcap CAP_NET_BIND_SERVICE=+eip $(readlink -f $(which java))
+#sudo setcap CAP_NET_BIND_SERVICE=+eip $(readlink -f $(which java))
 # /usr/lib/jvm/java-11-openjdk-armhf/bin/java
 
 

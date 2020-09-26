@@ -57,7 +57,7 @@ sunOp="-Xmx1024m"
 sunOp=
 sunClass=$raiz/classes/sun/loader
 seg=1
-porta=8080
+porta=80
 
 
 #export LD_LIBRARY_PATH=/usr/local/xapian/lib:$LD_LIBRARY_PATH
