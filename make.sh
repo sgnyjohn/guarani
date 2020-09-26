@@ -6,7 +6,9 @@ on() {
 }
 
 dr="loader servidor aplicacao"
-mkdir resources
+! test -e resources && mkdir resources
+! test -e www && mkdir www
+
 cp=.
 for i in $dr; do
 	cd java/$i
