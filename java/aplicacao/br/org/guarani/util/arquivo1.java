@@ -16,7 +16,6 @@ import java.util.zip.*;
 //****************************
 //****************************
 public class arquivo1 extends arquivo {
-	String lf = "\r\n"; 
 	ObjectOutputStream oos;
 	FileOutputStream oosF;
 	FileInputStream oisF;
@@ -470,18 +469,7 @@ public class arquivo1 extends arquivo {
 		buf = new byte[tBf];
 		return true;
 	}
-	//****************************
-	public boolean gravaLinha(String s) {
-		return grava(s+lf);
-	}
-	//****************************
-	public boolean grava(char c[],int t) {
-		return grava(c,0,t);
-	}
-	//****************************
-	public boolean grava(char c[],int ini,int t) {
-		return grava(new String(c,ini,t));
-	}
+
 	/****************************
 	public boolean grava(char c[],int ini,int t) {
 		if (out==null) abreOut(false);
@@ -497,19 +485,6 @@ public class arquivo1 extends arquivo {
 		return true;
 	}
 	*/
-	//****************************
-	public boolean grava(String s) {
-		if (out==null) abreOut(append);
-		byte b[] = s.getBytes();
-		try {
-			out.write(b);
-		} catch (Exception e) {
-			logs.grava("ERRO","arquivo1.grava(String s): "+e);
-			return false;
-		}
-		return true;
-	}
-
 	/****************************
 	public boolean gravaLIXO(String s) {
 		if (out==null) abreOut(false);

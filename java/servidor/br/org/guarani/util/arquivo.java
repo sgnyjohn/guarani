@@ -21,6 +21,32 @@ public class arquivo {
 	public int tBfL=512;
 	public String sErro;
 	public String charSet = System.getProperty("file.encoding");
+	public boolean append = false;
+	String lf = "\r\n"; 
+	//****************************
+	public boolean gravaLinha(String s) {
+		return grava(s+lf);
+	}
+	//****************************
+	public boolean grava(char c[],int t) {
+		return grava(c,0,t);
+	}
+	//****************************
+	public boolean grava(char c[],int ini,int t) {
+		return grava(new String(c,ini,t));
+	}
+	//****************************
+	public boolean grava(String s) {
+		if (out==null) abreOut(append);
+		byte b[] = s.getBytes();
+		try {
+			out.write(b);
+		} catch (Exception e) {
+			logs.grava("ERRO","arquivo1.grava(String s): "+e);
+			return false;
+		}
+		return true;
+	}	
 	//***************************************
 	public static void dirRecursivo(File f,strPesq fil,Hashtable r) {
 		File v[] = f.listFiles();

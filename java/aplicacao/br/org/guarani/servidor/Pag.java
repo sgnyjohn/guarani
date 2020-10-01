@@ -10,12 +10,16 @@ import java.io.*;
 
 import br.org.guarani.servidor.*;
 import br.org.guarani.util.*;
+import br.org.guarani.loader.op;
+import br.org.guarani.loader.loaderConf;//opcaoC;
 
 //*****************************************//
 //*****************************************//
 public class Pag implements Prg {
-	protected final static String Web = "3WS Sistemas";//"3WS Sistemas";
-	protected static String Setor = "Demonstração";
+	//private static String Cliente = "3WS Sistemas";//"3WS Sistemas";
+	//private static String Setor = "Demonstração";
+	private static loaderConf opC; // = new opcaoC();
+	private static boolean ca = false; 
  
 	//config static
 	protected static boolean iStatic = false;
@@ -50,7 +54,50 @@ public class Pag implements Prg {
 	public String meta = "";
 	
 	public String charSet = Guarani.getCfg("charset","iso-8859-1");
-
+	
+	//**************************************
+	// dados copia
+	public static String opC(String s) {
+		return ""+opC.get(s);
+	}
+	public boolean opCimg(String ch) {
+		op o = null;//(op)opC(ch);
+		if (o!=null) {
+			ped.img(o.buf);
+		} else {
+			logs.grava("erro","falta imagem op="+ch);
+			return false;
+		}
+		return true;
+	}
+	//***********************************
+	public static BufferedReader arq(String nome) {
+		op o = null;//opC(nome);
+		if (o==null) {
+			return null;
+		}
+		return o.arq();
+	}
+	//***********************************
+	public static boolean opCExiste(String nome) {
+		return opC.get(nome)!=null;
+	}
+	//***************************************
+	public static void initSis() {
+		if (ca) {
+			return;
+		}
+		//opC = new opcaoC();
+		opC = new loaderConf();
+		//opC.initA(null);
+		//Cliente = ""+opC.get("cliente");//.toString();
+		//Setor = ""+opC.get("setor");
+		/*if (!Web.equals(opC.get("3").toString())) {
+			System.exit(12);
+		}
+		*/
+		ca = true;
+	}
 	//**************************************
 	//retorna digito para controle de verssao javascript css
 	public void print(String s,Object... o) {
@@ -201,6 +248,7 @@ public class Pag implements Prg {
 			msg = new Hashtable();
 			Guarani.put("msg",msg);
 		}
+		initSis();
 	}
 	//**************************************//
 	public HashtableOrd sessoes() {
@@ -617,7 +665,7 @@ public class Pag implements Prg {
 	//*****************************************//
 	public void rodap() {
 		ped.on("<center><hr class=hrPadrao><font size=2><b>"
-			+Setor//libCopia +"<br><font size=2>"+Web+"</b> - "
+			+opC("setor")//libCopia +"<br><font size=2>"+Web+"</b> - "
 			+"<a href=javascript:chatAbre();>CHAT</a>"
 		);
 		//ped.on("<font size=1> "+tempo()+"");

@@ -213,6 +213,7 @@ public class Guarani {
 
 		//rt = Runtime.getRuntime();
 		//Runtime.getRuntime().addShutdownHook(new fim());
+		// cada classe que necessita pode criar a sua terefa fim...
 		Provider p[] = Security.getProviders();
 		for (int i=0;i<p.length;i++) {
 			Guarani.log(i+" "+p[i]);

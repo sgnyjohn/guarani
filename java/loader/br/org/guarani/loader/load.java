@@ -113,7 +113,7 @@ class load {
 				} else {
 					r += exec(cm+" "+conf(i,"path")+" "+cp.substring(1)+" "+strL.trimm(compil[i])+" ",null);
 				}
-				logsL.deb(0,"v COMPILAR: "+i+" "+cm+" "+cp+" "+compil[i]);
+				logsL.deb(0,"vai COMPILAR: i="+i+" cm="+cm+" cp="+cp+" cpi="+compil[i]);
 				//testa se compilou ok
 				String rs = loaders[i].testa();
 				if (rs==null) {
@@ -526,7 +526,7 @@ class load {
 			StreamPumperL inputPumper = 
 				new StreamPumperL(compilerInput, tmpInput);
    
-			errPumper.start();
+			errPumper.start(); 
 			inputPumper.start();
    
 			p.waitFor();
@@ -542,7 +542,7 @@ class load {
 			erro = p.exitValue()!=0;
 			sErro =  p.exitValue()+"=="+tmpErr.toString();
 			
-			r = erro?sErro:tmpInput.toString();
+			r = (erro?sErro+"\n\n":"")+tmpInput.toString();
    
 			p.destroy();
 

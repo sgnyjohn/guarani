@@ -13,6 +13,7 @@ public class data {
 	//,Locale.pt_BR);
 	//private static Class c1 = gnu.java.locale.Calendar.class;
 	//private static Class c2 = gnu.java.locale.LocaleInformation.class;
+	private static SimpleDateFormat fusHttp;
 
 	//*********************************
 	public static long ms(String st) {
@@ -82,7 +83,6 @@ public class data {
 	//
 	public static String strHttp(Date a) {
 		String r;
-		Locale l = Locale.UK;
 		//Locale l = new Locale("pt_BR");
 		/*ResourceBundle res = ResourceBundle.getBundle("gnu.java.locale.LocaleInformation", l,
 					 ClassLoader.getSystemClassLoader());
@@ -101,12 +101,15 @@ public class data {
 		
 		//SimpleDateFormat fus = new SimpleDateFormat ("EEE, dd MMM yyyy hh:mm:ss",Locale.US);
 		//SimpleDateFormat fus = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss z",l);
-		SimpleDateFormat fus = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss",l);
+		if (fusHttp==null) {
+			Locale l = Locale.UK;
+			fusHttp = new SimpleDateFormat("EEE, dd MMM yyyy HH:mm:ss",l);
+			fusHttp.setTimeZone(TimeZone.getTimeZone("GMT+00"));
+		}
 		//gcj4//
-		fus.setTimeZone(TimeZone.getTimeZone("GMT+00"));
 		//fus.setTimeZone(TimeZone.getTimeZone("GMT"));
 		//r = fus.format(a)+" GMT";
-		r = fus.format(a)+" GMT";
+		r = fusHttp.format(a)+" GMT";
 		return r;
 	}
 

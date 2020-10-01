@@ -21,6 +21,8 @@ import br.org.guarani.util.*;
 import java.util.*;
 import java.net.*;
 
+import java.security.cert.X509Certificate;
+
 //********************************
 //********************************
 public class httpSessao implements ObjectOrd {
@@ -44,7 +46,66 @@ public class httpSessao implements ObjectOrd {
 	
 	//lim sessao
 	private static long limUTeste;
+	private static String arqSessoes = "/tmp/sessoes.csv";
 
+	//*****************************************//
+	public boolean validaX509(Pedido ped) {
+		X509Certificate x509 = ped.getCliCert();		
+		if (x509==null) {
+			logs.grava("x509","pedido não retornou cert, usuário sem cert?");
+			return false;
+		}
+		String a = x509.getSubjectDN().getName();
+		String usu = str.substrAtAt(a,"CN=",",");		
+		Object o = Usuario.get(getId(),usu);
+		usuario = (Usuario)o;//sessao.getUsuario();
+		if (usuario==null) {
+			logs.grava("x509","usuario="+usu+"= não validado class Usuario");
+			usu = "?";
+			return false;
+		}
+		usuario.valida();
+		//setUsuario(usuario);
+		return true;
+	}
+	//********************************
+	public static void salva() {
+		arquivo aq = new arquivo(arqSessoes);
+		for (Enumeration e = sessoes.elements();e.hasMoreElements();) {
+			httpSessao s = (httpSessao)e.nextElement();
+			String ln = s.nova+"\t"+s.conf+"\t"+s.usuario
+				+"\t"+s.id+"\t"+s.host+"\t"+s.ip+"\t"+s.browser
+				+"\t"+s.datac+"\t"+s.dataa+"\t"+s.datav
+				+"\t"+s.dados
+			;
+			aq.gravaLinha(ln);
+		}
+		aq.fecha();
+	}
+	//********************************
+	public static void sessoesInit() {
+		//salva ao shutdown
+		Runtime.getRuntime().addShutdownHook(new Thread() {
+			public void run() {
+				//salva sessoes
+				logs.grava("fim","Thread salvando...");
+				salva();
+			}
+		});
+		logs.grava("fim","add shutdown hook");
+		
+		//salva periodicamente
+		(new Thread() {
+			public void run() {
+				//salva a cada 10 minutos
+				try {
+					Thread.sleep(60000*10);
+				} catch (Exception e) {
+				}
+				salva();
+			}
+		}).start();
+	}
 	//********************************
 	public static void resetUsuario(String u) {
 		//limpa nas SESSOES
@@ -166,6 +227,14 @@ public class httpSessao implements ObjectOrd {
 	}
 	//********************************
 	protected httpSessao(Http ht) {
+		//executa apenas 1 vez
+		if (nsLimite == -1) {
+			nsLimite = str.inteiro((String)ht.cnf.get("maxSessoes"),100);
+			logs.grava("Http maxSessoes="+nsLimite);
+			//Runtime.getRuntime().addShutdownHook(new salva());
+			sessoesInit();
+		}
+		
 		Socket sk = ht.sp;
 		Pedido ped = ht.pedido;
 		Hashtable hr = ped.getCab();
@@ -230,7 +299,12 @@ public class httpSessao implements ObjectOrd {
 	}
 	//********************************
 	//********************************
-	protected static void setUsuario(String ip,String idSes,Usuario u) {
+	protected void setUsuario(Usuario u) {
+		usuario = u;
+	}
+	/* *******************************
+	//********************************
+	protected static void setUsuario1(String ip,String idSes,Usuario u) {
 		httpSessao r = (httpSessao)sessoes.get(idSes);
 		if (r !=null && r.ip.equals(ip)) {
 			if (r.usuario!=null && r.usuario.compara(u)) {
@@ -245,6 +319,7 @@ public class httpSessao implements ObjectOrd {
 				+ip+" idSess="+idSes+" não fecha "+r);
 		}
 	}
+	*/	
 	//********************************
 	public static void limpa(Pedido ped) {
 		String k;
@@ -294,11 +369,6 @@ public class httpSessao implements ObjectOrd {
 	}
 	//********************************
 	protected synchronized static httpSessao getSessao(Http ht) {
-		//ja setou nro máximo de sessoes?
-		if (nsLimite == -1) {
-			nsLimite = str.inteiro((String)ht.cnf.get("maxSessoes"),10);
-			logs.grava("Http maxSessoes="+nsLimite);
-		}
 		
 		Socket sk = ht.sp;
 		Pedido ped = ht.pedido;
@@ -331,21 +401,23 @@ public class httpSessao implements ObjectOrd {
 	}
 	//********************************
 	protected synchronized static void limSessao() {
-		//testa LIMITE/limita SESSOES - de 10 em 10 segundos...
-		if (data.ms()-limUTeste<10000) {
+		//testa LIMITE/limita SESSOES validadas - a cada 10min
+		if (data.ms()-limUTeste<600000) {
 			return;
 		}
 		limUTeste = data.ms();
 		//se necessario invalida sessoes com ultimo acesso + antigo
+		// toDo - não tem sentido invalidar sessões usuário válido...,
+		// 	deveria excluir sessões sem usuário.
 		Object o[] = sessoes.Ordena("dataa");
 		int ns=0;
 		for (int i=0;i<o.length;i++) {
-			httpSessao s = (httpSessao)sessoes.get(o[i]);;
+			httpSessao s = (httpSessao)sessoes.get(o[i]);
 			Usuario u = s.getUsuario();
 			if ( u!=null && u.valido() && u.validoS() ) {
 				ns++;
 				if (ns>nsLimite) {
-					u.validoS = false;
+					//u.validoS = false;
 				}
 			}
 		}

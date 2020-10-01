@@ -9,7 +9,6 @@ import java.io.*;
 import br.org.guarani.servidor.*;
 import br.org.guarani.util.*;
 
-import java.security.cert.X509Certificate;
 
 //*****************************************//
 //*****************************************//
@@ -40,7 +39,14 @@ public class PagV extends Pag {
 	}
 	//*****************************************//
 	private final boolean validaX509() {
-		X509Certificate x509 = ped.getCliCert();		
+		if (sessao.validaX509(ped)) {
+			usuario = sessao.getUsuario();
+			usu = usuario.getNome();
+			return true;
+		}
+		return false;
+		
+		/*X509Certificate x509 = ped.getCliCert();		
 		if (x509==null) {
 			logs.grava("x509","pedido não retornou cert, usuário sem cert?");
 			return false;
@@ -55,7 +61,9 @@ public class PagV extends Pag {
 			return false;
 		}
 		usuario.valida();
+		(ped.getSessao()).setUsuario(usuario);
 		return true;
+		*/
 	}
 	//*****************************************//
 	private final boolean valida() {
@@ -322,12 +330,12 @@ public class PagV extends Pag {
 	//*****************************************
 	public final void rodap() {
 		ped.on("<center><hr class=hrPadrao>"
-			+"<font size=1><b>"+Setor+" x</b></font>"
+			+"<font size=1><b>"+opC("cliente")+" x</b></font>"
 			+"<br><b><font size=1>"
 			+"<a href=\"http://www.3wsistemas.com.br/?classe="
 			+this.getClass().getName()
 			+"&cop="+id()
-			+"\">"+Web+"</a></font></b>"
+			+"\">"+opC("setor")+"</a></font></b>"
 		);
 		if (doGrupo("dev") && cl!=null) {
 			String a = str.troca(cl,".","\\")+".java";

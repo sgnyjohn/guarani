@@ -216,7 +216,9 @@ class Http extends ProtocoloAbstrato {
 							Guarani.stop(0);
 							rodando = false;
 						} else {
-							logs.grava("seguranca","tentativa inválida de stop ip="+sessao.ip+" proxy="+(pedido.proxy?"true":"false"));
+							logs.grava("seguranca","tentativa inválida de stop ip="+sessao.ip
+								+" proxy="+(pedido.proxy?"true":"false")
+							);
 						}
 					} else {
 						resp(httpVer+" 200 OK");
@@ -241,7 +243,12 @@ class Http extends ProtocoloAbstrato {
 						+lf+movTemp
 					);
 					*/
-					movTemp(dsv,"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()+";Path=/");
+					movTemp(dsv,
+						"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()
+						+";Expires="+data.strHttp(data.ms()+3600000l*24*365)
+						+";Path=/"
+					);
+					//logs.grava("vcto sessão="+data.strHttp(data.ms()+3600000*24*365));
 				}
 				rodando = false;
 			} else if (x!=-1) {

@@ -131,7 +131,8 @@ public class Val extends ProtocoloAbstrato {
 		if (debug) { 
 			logs.grava("val","logon="+u+" ch="+idSess+" msg="+msg);
 		}
-		httpSessao.setUsuario(ip,idSess,u);
+		//httpSessao.setUsuario(ip,idSess,u);
+		ses.setUsuario(u);
 	}
 	/********************************
 	public static Usuario getUsuario(String ip,String idSess) {
