@@ -69,16 +69,23 @@ public class httpSessao implements ObjectOrd {
 		return true;
 	}
 	//********************************
+	public static void load() {
+		arquivo aq = new arquivo(arqSessoes);
+		String ln;
+		while ((ln=aq.leLinha())!=null) {
+			httpSessao s = new httpSessao(ln);
+			if (s.usuario!=null) {
+				sessoes.put(s.id,s);
+			}
+		}
+		aq.fecha();
+	}
+	//********************************
 	public static void salva() {
 		arquivo aq = new arquivo(arqSessoes);
 		for (Enumeration e = sessoes.elements();e.hasMoreElements();) {
 			httpSessao s = (httpSessao)e.nextElement();
-			String ln = s.nova+"\t"+s.conf+"\t"+s.usuario
-				+"\t"+s.id+"\t"+s.host+"\t"+s.ip+"\t"+s.browser
-				+"\t"+s.datac+"\t"+s.dataa+"\t"+s.datav
-				+"\t"+s.dados
-			;
-			aq.gravaLinha(ln);
+			aq.gravaLinha(s.httpSessaoV());
 		}
 		aq.fecha();
 	}
@@ -225,6 +232,35 @@ public class httpSessao implements ObjectOrd {
 	public String getId() {
 		return id;
 	}
+	//********************************
+	private httpSessao(String ln) {
+		String v[] = str.palavraA(ln,"\t");
+		id = v[0];
+		nova = v[1].equals("true");
+		conf = v[2].equals("true");
+		usuario = Usuario.get(id,v[3]);
+		host = v[4];
+		ip = v[5];
+		browser = v[6];
+		datac = str.longo(v[7],-1);
+		dataa = str.longo(v[8],-1);
+		datav = str.longo(v[9],-1);		
+	}
+	//********************************
+	private String httpSessaoV() {
+		return id
+			+"\t"+nova
+			+"\t"+conf
+			+"\t"+usuario.getNome()
+			+"\t"+host
+			+"\t"+ip
+			+"\t"+browser
+			+"\t"+datac
+			+"\t"+dataa
+			+"\t"+datav
+			+"\t"+dados		
+		;
+	}	
 	//********************************
 	protected httpSessao(Http ht) {
 		//executa apenas 1 vez
