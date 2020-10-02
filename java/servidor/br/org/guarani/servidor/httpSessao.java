@@ -245,7 +245,8 @@ public class httpSessao implements ObjectOrd {
 		id = v[0];
 		nova = v[1].equals("true");
 		conf = v[2].equals("true");
-		usuario = Usuario.get(id,v[3]);
+		usuario = Usuario.get(id,str.leftAt(v[3],"~"));
+		usuario.UsuarioSet(v[3]);
 		host = v[4];
 		ip = v[5];
 		browser = v[6];
@@ -258,7 +259,7 @@ public class httpSessao implements ObjectOrd {
 		return id
 			+"\t"+nova
 			+"\t"+conf
-			+"\t"+usuario.getNome()
+			+"\t"+usuario.UsuarioV()
 			+"\t"+host
 			+"\t"+ip
 			+"\t"+browser

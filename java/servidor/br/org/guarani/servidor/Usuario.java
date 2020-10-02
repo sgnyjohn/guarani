@@ -15,15 +15,39 @@ public class Usuario {
 	public String nome;
 	private long dataV=0,dataC; //ultima validacao-criação
 	private long dataA=0; //ultimo acesso validado
-	private long nInval=0,nVal=0,nAcess=0;
 	private long vence;
+	private long nInval=0,nVal=0,nAcess=0;
 	protected boolean validoS = true;
 	public String grupos,gruposS,gruposN;
 	public Hashtable dados;
 		
 	//controle ver hash
 	static long clVer=0L;
-
+	//********************************
+	String UsuarioV() {
+		String r = nome
+			+"~"+dataC
+			+"~"+dataV
+			+"~"+dataA
+			+"~"+vence
+			+"~"+nInval
+			+"~"+nVal
+			+"~"+nAcess
+		;
+		return r;
+	}
+	//********************************
+	boolean UsuarioSet(String ln) {
+		String v[] = ln.split("~");
+		dataC = str.longo(v[1],-1);
+		dataV = str.longo(v[2],-1);
+		dataA = str.longo(v[3],-1);
+		vence = str.longo(v[4],-1);
+		nInval = str.longo(v[5],-1);
+		nVal = str.longo(v[6],-1);
+		nAcess = str.longo(v[7],-1);
+		return true;
+	}
 	//**************************************************
 	// retorna o valor de uma variavel
 	public Object get(String Var) {
@@ -154,8 +178,6 @@ public class Usuario {
 	//********************************
 	public  void init(String idSess,String us) {
 		//ip = pip;
-		
-		
 		ses = idSess;
 		dominio = str.leftAt(us,"\\\\");
 		nome = str.substrAt(us,"\\\\");
