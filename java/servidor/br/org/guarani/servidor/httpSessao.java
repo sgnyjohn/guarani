@@ -72,22 +72,28 @@ public class httpSessao implements ObjectOrd {
 	public static void load() {
 		arquivo aq = new arquivo(arqSessoes);
 		String ln;
+		int nv=0;
 		while ((ln=aq.leLinha())!=null) {
 			httpSessao s = new httpSessao(ln);
 			if (s.usuario!=null) {
 				sessoes.put(s.id,s);
+				nv++;
 			}
 		}
 		aq.fecha();
+		logs.grava("fim","sessoes carregadas "+nv);
 	}
 	//********************************
 	public static void salva() {
 		arquivo aq = new arquivo(arqSessoes);
+		int nv=0;
 		for (Enumeration e = sessoes.elements();e.hasMoreElements();) {
 			httpSessao s = (httpSessao)e.nextElement();
 			aq.gravaLinha(s.httpSessaoV());
+			nv++;
 		}
 		aq.fecha();
+		logs.grava("fim","sessoes salvas "+nv);
 	}
 	//********************************
 	public static void sessoesInit() {
@@ -100,6 +106,7 @@ public class httpSessao implements ObjectOrd {
 			}
 		});
 		logs.grava("fim","add shutdown hook");
+		load();
 		
 		//salva periodicamente
 		(new Thread() {
