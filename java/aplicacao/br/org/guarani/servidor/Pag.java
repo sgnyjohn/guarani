@@ -54,7 +54,22 @@ public class Pag implements Prg {
 	public String meta = "";
 	
 	public String charSet = Guarani.getCfg("charset","iso-8859-1");
-	
+
+	//**************************************************
+	public String paramC(String s) {
+		return paramC(s,null);
+	}
+	//**************************************************
+	public String paramC(String s,String pdr) {
+		String v = ped.getString(s);
+		if (v==null) {
+			v = ped.getCookie(s);
+			if (v==null) {
+				v = pdr;
+			}
+		}
+		return v;
+	}
 	//**************************************
 	// dados copia
 	public static String opC(String s) {

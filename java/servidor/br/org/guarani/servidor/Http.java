@@ -30,10 +30,11 @@ class Http extends ProtocoloAbstrato {
 		+"Cache-Control: no-store"+lf
 		+"Content-Type: "+Guarani.tipos.getTipo(".html")+"; charset="+charset+lf
 	;
+	httpSessao sessaoN; //sessão não sessão
 
 	protected boolean multiPart = false;
 
-	protected int tBf = 1024*512,timeoutUpload=-1;
+	protected int tBf = 1024*1024*4,timeoutUpload=-1;
 	protected byte[] buf = new byte[tBf];
 
 	protected String get, geto, param, term, ext, get1,permissao;
@@ -88,8 +89,10 @@ class Http extends ProtocoloAbstrato {
 	// mpv mplayer não aceitam sessão
 	boolean naoSessao() {
 		if (naoSessao!=null) {
+			String s = (String)pd.get("?endereco");
 			for (short i=0;i<naoSessao.length;i++) {
-				if (str.equals(get1,naoSessao[i])) {
+				//ogs.grava(s+" "+naoSessao[i]);
+				if (str.equals(s,naoSessao[i])) {
 					return true;
 				}
 			}
@@ -192,12 +195,16 @@ class Http extends ProtocoloAbstrato {
 
 		//criar sessão?
 		if (!erro && rodando && classe) {
-			httpSessao sessao = httpSessao.getSessao(this);
-			String dsv = (String)pd.get("?endereco");
-			x = dsv.indexOf("_GS_");
-			if (sessao==null) {
-				if (naoSessao()) {
-				} else {
+			if (naoSessao()) {
+				httpSessao sessao = sessaoN;
+				sessao.dataa = data.ms();
+				pedido.setSessao(sessao);
+				pedido.naoSessao = true;
+			} else {
+				httpSessao sessao = httpSessao.getSessao(this);
+				String dsv = (String)pd.get("?endereco");
+				x = dsv.indexOf("_GS_");
+				if (sessao==null) {
 					deb("sessao null");
 					//1o acesso
 					try {
@@ -206,70 +213,70 @@ class Http extends ProtocoloAbstrato {
 					}
 					dsv = (dsv.indexOf("?")==-1 ?dsv+"?" :dsv+"&"+"_GSI_="+data.ms());
 					movTemp(dsv,null);
-				}
-			} else if (sessao.nova) {
-				if (x!=-1) {
-					deb("sessao nova -1");
-					if (str.equals(get1,"/adm.class?op=stop")) {
-						if ( (sessao.ip.equals("127.0.0.1")||sessao.ip.equals("0:0:0:0:0:0:0:1")) && !pedido.proxy ) {
-							logs.grava("seguranca","stop aceito ip="+sessao.ip+" proxy="+(pedido.proxy?"true":"false"));
-							Guarani.stop(0);
-							rodando = false;
+				} else if (sessao.nova) {
+					if (x!=-1) {
+						deb("sessao nova -1");
+						if (str.equals(get1,"/adm.class?op=stop")) {
+							if ( (sessao.ip.equals("127.0.0.1")||sessao.ip.equals("0:0:0:0:0:0:0:1")) && !pedido.proxy ) {
+								logs.grava("seguranca","stop aceito ip="+sessao.ip+" proxy="+(pedido.proxy?"true":"false"));
+								Guarani.stop(0);
+								rodando = false;
+							} else {
+								logs.grava("seguranca","tentativa inválida de stop ip="+sessao.ip
+									+" proxy="+(pedido.proxy?"true":"false")
+								);
+							}
 						} else {
-							logs.grava("seguranca","tentativa inválida de stop ip="+sessao.ip
-								+" proxy="+(pedido.proxy?"true":"false")
+							resp(httpVer+" 200 OK");
+							o.print(cabPrg+lf
+								+"<html><h1>Browser não aceita cookie"
+								+"<br>em: "+data.strSql()
+								+"<br>cookies: "+pedido.cook
+								+"<br>"+httpSessao.nomeCook+": "+pedido.cook.get(httpSessao.nomeCook)
+								+"</h1></html>"
 							);
+							logs.grava("servidor","não aceita cookie: "+pedido+"<br>pd="+pd);
 						}
 					} else {
-						resp(httpVer+" 200 OK");
-						o.print(cabPrg+lf
-							+"<html><h1>Browser não aceita cookie"
-							+"<br>em: "+data.strSql()
-							+"<br>cookies: "+pedido.cook
-							+"<br>"+httpSessao.nomeCook+": "+pedido.cook.get(httpSessao.nomeCook)
-							+"</h1></html>"
+						//deb("sessao nova setar cook");
+						//resp(httpVer+" 302 Moved Temporarily");
+						dsv = (dsv.indexOf("?")==-1?dsv+"?"	:dsv+"&")	+"_GS_="+data.ms();
+						//l ogs.grava("sessao","set cook dsv="+dsv);
+						/*o.print(cabPrg
+							+"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()+";Path=/"+lf
+							+ "Content-Length: "+movTemp.length()+lf				
+							+"Location: "+dsv+lf
+							+lf+movTemp
 						);
-						logs.grava("servidor","não aceita cookie: "+pedido+"<br>pd="+pd);
+						*/
+						movTemp(dsv,
+							"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()
+							+";Expires="+data.strHttp(data.ms()+3600000l*24*365)
+							+";Path=/"
+						);
+						//logs.grava("vcto sessão="+data.strHttp(data.ms()+3600000*24*365));
 					}
-				} else {
-					//deb("sessao nova setar cook");
-					//resp(httpVer+" 302 Moved Temporarily");
-					dsv = (dsv.indexOf("?")==-1?dsv+"?"	:dsv+"&")	+"_GS_="+data.ms();
-					//l ogs.grava("sessao","set cook dsv="+dsv);
-					/*o.print(cabPrg
-						+"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()+";Path=/"+lf
+					rodando = false;
+				} else if (x!=-1) {
+					//deb("sessao confirma");
+					sessao.confirma();
+					dsv = dsv.substring(0,x-1);
+					//l ogs.grava("sessao","sessao confirma dsv="+dsv);
+					/*resp(httpVer+" 302 Moved Temporarily");
+					o.print("Location: "+dsv+lf
+						+cabPrg
 						+ "Content-Length: "+movTemp.length()+lf				
-						+"Location: "+dsv+lf
 						+lf+movTemp
 					);
 					*/
-					movTemp(dsv,
-						"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()
-						+";Expires="+data.strHttp(data.ms()+3600000l*24*365)
-						+";Path=/"
-					);
-					//logs.grava("vcto sessão="+data.strHttp(data.ms()+3600000*24*365));
+					movTemp(dsv,null);
+					rodando = false;
+				} else {
+					//setar sessão pedido...
+					//deb("sessao ok");
+					sessao.dataa = data.ms();
+					pedido.setSessao(sessao);
 				}
-				rodando = false;
-			} else if (x!=-1) {
-				//deb("sessao confirma");
-				sessao.confirma();
-				dsv = dsv.substring(0,x-1);
-				//l ogs.grava("sessao","sessao confirma dsv="+dsv);
-				/*resp(httpVer+" 302 Moved Temporarily");
-				o.print("Location: "+dsv+lf
-					+cabPrg
-					+ "Content-Length: "+movTemp.length()+lf				
-					+lf+movTemp
-				);
-				*/
-				movTemp(dsv,null);
-				rodando = false;
-			} else {
-				//setar sessão pedido...
-				//deb("sessao ok");
-				sessao.dataa = data.ms();
-				pedido.setSessao(sessao);
 			}
 		}
 
@@ -486,11 +493,12 @@ class Http extends ProtocoloAbstrato {
 				dirIgnora[i] = "/"+str.trimm(dirIgnora[i],"/")+"/";
 			}
 		}
-		if (cnf.get("naoSessao")!=null) {
+		if (cnf.get("naoSessao")!=null) { 
 			naoSessao=str.palavraA(str.trocaTudo(str.trimm(""+cnf.get("naoSessao")),"  "," ")," ");
 			for (int i=0;i<naoSessao.length;i++) {
 				naoSessao[i] = "/"+str.trimm(naoSessao[i],"/")+"/";
 			}
+			sessaoN = new httpSessao();
 		}		
 	}
 	//********************************
@@ -1005,7 +1013,22 @@ class Http extends ProtocoloAbstrato {
 	}
 	//********************************
 	//manda htm
+	// java parece ineficiente no IO... rede ou disco ? linux ou windows ? open ou oracle ?
+	// talvez pondo um sleep que é mal feito no IO
 	public boolean mandaArq(String nArq,String nome,boolean attach) {
+		/* 	If-Range
+			Content-Range
+			Content-Type
+			206 Partial Content
+			416 Range Not Satisfiable
+			===> uteis
+			Accept-Ranges: bytes
+			Content-Range: bytes 0-2472168733/2472168734
+			Content-Range: bytes 2472157854-2472168733/2472168734
+			...
+			Range: bytes=0-
+			Range: bytes=2472157854-
+		 */
 		if (nome==null) {
 			nome = str.substrRat(nArq,"/");
 		}
@@ -1022,41 +1045,76 @@ class Http extends ProtocoloAbstrato {
 			o.println("<html><body>Http: Não existe!!</body></html>");
 			return false;
 		}
+		//mime type
 		String tp = ""+Guarani.tipos.getTipo(ext);
 		if (str.equals(tp,"text/")) {
 			tp += "; charset="+charset;
 		}
-		pedido.cab = httpVer+" 200 OK"+lf
-			+	"Content-Type: "+tp+lf
-			+ "Content-Disposition: "+(attach?"attachment; ":"")+"filename=\""+nome+"\";"+lf
+		//range?
+		String rg = (String)pd.get("range");
+		long pi=0,pf=0;
+		if (rg!=null) {
+			rg = str.trimm(str.substrAt(rg,"="));
+			pi = str.longo(str.leftAt(rg,"-"),0);
+			pf = str.longo(str.substrAt(rg,"-"),arq.length());
+		}
+		pedido.cab = httpVer+(rg==null?" 200 OK":" 206 Partial Content")+lf
+			+ "Content-Type: "+tp+lf
+			+ (attach?"Content-Disposition: attachment; filename=\""+nome+"\";"+lf:"")
 			+ "Last-Modified: "+data.strHttp(arq.lastModified())+lf
-			+ "Content-Length: "+arq.length()+lf
+			+ "Accept-Ranges: bytes"+lf
+			+ (rg==null
+				? 	"Content-Length: "+arq.length()+lf
+				:	"Content-Length: "+(pf-pi+1)+lf
+					+"Content-Range: bytes "+pi+"-"+(pf-1)+"/"+arq.length()+lf
+			  )
 			+ "Connection: close"+lf
 		;
-		//logs.grava(ext+"="+pedido.cab);
+		//ogs.grava(ext+"="+pedido.cab+"\n===>"+pd);
 		o.print(pedido.cab+lf);
-		int env=0;
+		int env=0,nv=0;
 		long t = data.ms();
 		try {
 			//OutputStream oo = sp.getOutputStream();
 			InputStream r = new FileInputStream(""+arq);
+			if (pi!=0) {
+				r.skip(pi);
+			}
 			int read = 0;
-			while (!o.checkError() & (read = r.read(buf,0,tBf)) != -1) {
-				//oo.write(buf, 0, read);
-				//oo.flush();
-				//logs.grava("vai ARQ tam="+read);
-				//o.print(new String(buf,0,read));
-				o.write(buf,0,read);
-				nBytes += read;
-				env += read;
+			if (rg==null) {
+				while (!o.checkError() & (read = r.read(buf,0,tBf)) != -1) {
+					//oo.write(buf, 0, read);
+					//oo.flush();
+					//logs.grava("vai ARQ tam="+read);
+					//o.print(new String(buf,0,read));
+					env += read;
+					nv++;
+					o.write(buf,0,read);
+				}
+			} else {
+				long te = pf-pi+1;
+				while (!o.checkError() & env<te & (read = r.read(buf,0,tBf)) != -1) {
+					env += read;
+					nv++;
+					if (env>te) {
+						o.write(buf,0,(int)(te-env+read));
+						break;
+					} else {
+						o.write(buf,0,read);
+					}
+				}
 			}
 			r.close();
 		} catch (IOException e ) {
-			logs.grava("baixa","ERRO, Http.mandaArq "+nArq+" e="+str.erro(e)+" bytes Env="+env+" usu="+pedido);
+			nBytes += env;
+			logs.grava("baixa","ERRO, Http.mandaArq "+nArq
+				+" e="+e+" bytes Env="+env+" usu="+pedido //str.erro(e)
+			);
 			o.println("ERRO ARQ "+nArq+"<br>");
 			//o.println(e.toString());
 			return false;
 		}
+		//logs.grava("baixa","env="+env+" nv="+nv+" bloco="+(env/nv));
 		/*logs.grava("baixa","OK, Http.mandaArq "
 			+" by/segs: "+num.format(env*1.0/(data.ms()-t),1)
 			+" by len / env: "+num.format(arq.length(),0)+" / "+num.format(env,0)

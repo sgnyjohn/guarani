@@ -84,11 +84,11 @@ public class PagV extends Pag {
 			logs.debug("Header, desviou para valusuario.class="+ev+" "+ped.getCab("?endereco"));
 			//return true;
 		} else {
-			logs.debug("JavaScript, desviou para "+ev+"=retornar para: "+ped.getCab("?endereco"));
+			//logs.debug("JavaScript, desviou para "+ev+"=retornar para: "+ped.getCab("?endereco"));
 			//redireciona via JS
 			if (obj) {
 				//script("alert('logon');");
-				on("<div jxAcao=\"logon\" data-url=\""+ev+"\"></div>");
+				on("<div class=\"xhrAction\" data-url=\""+ev+"\">logon</div>");
 			} else {
 				on(
 					"<html><head><title>Logon</title></head>"
@@ -142,7 +142,7 @@ public class PagV extends Pag {
 			//porta deve ser colocada no endereço
 			url = str.troca(url,"@h@",str.leftAt(getHost()+":",":"));
 		} 
-		logs.grava("valClass="+url);
+		//ogs.grava("valClass="+url);
 		return url;
 	}
 	//***************************************
@@ -269,8 +269,9 @@ public class PagV extends Pag {
 		usuario = sessao.getUsuario();
 		//logs.grava("usu="+usuario.valido()+" "+usuario);
 
-		
-		if (logon) {
+		if (ped.naoSessao()) {
+			return true;
+		} else {
 			//logs.grava("logon="+usuario.valido());
 			if (usuario!=null && usuario.valido() && !usuario.validoS()) {
 				cab("Limite usuários!!");

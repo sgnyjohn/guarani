@@ -144,7 +144,7 @@ public class Usuario {
 			+" ultimo Acesso: "+(t-dataA)/1000+" segs - nro Acessos: "+nAcess
 			+" - segundos logado: "+(t-dataV)/1000+" -  nro validacoes: "+nVal
 			+" -  valInvalidas: "+nInval+" ss="+(validoS?"S":"N")
-			+" vence="+(vence/1000)
+			+" vence("+data.strSql(dataA+vence)+" <b>"+data.tempo(vence-t+dataA)+"</b>"
 			+")"
 		;
 		/*return "(<b>usuario</b>: nome=<b><font color="+

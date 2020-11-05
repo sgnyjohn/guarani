@@ -74,7 +74,11 @@ public class Pedido {
 	int naImg = 0;
 	public boolean chunked = false;
 	public String outArq = null;
+	boolean naoSessao = false;
 
+	public boolean naoSessao() {
+		return naoSessao;
+	}
 	//***********************************
 	//public int write(byte[] b,int pi,int tm) {
 	//	return out.write(b,pi,tm);

@@ -26,7 +26,6 @@ public class arquivo1 extends arquivo {
 	boolean ccFim = false;
 	int mxCampos = 32;
 	public String dl = "\t"; //CSV delimitador colunas
-	public boolean append = false;
 	/***************************************************************/
 	public String leTxt(String charSet) {
 		if (!f.exists()) {

@@ -32,6 +32,8 @@ public class httpSessao implements ObjectOrd {
 	static int limpaNovas=0;
 	protected static int nsLimite = -1;  //10 sessoes no máximo
 	//static Hashtable ips = new Hashtable();
+	static long vence = str.longo(Guarani.getCfg("logonSegs"),60*15)*1000L;
+
 
 	//var sessoes
 	protected boolean nova=true,conf=false;
@@ -46,7 +48,9 @@ public class httpSessao implements ObjectOrd {
 	
 	//lim sessao
 	private static long limUTeste;
-	private static String arqSessoes = "/tmp/sessoes.csv";
+	private static String arqSessoes = Guarani.dirDados+"/sessoes.csv";
+	private String valAnt="";
+	private boolean valid = false;
 
 	//*****************************************//
 	public boolean validaX509(Pedido ped) {
@@ -89,8 +93,10 @@ public class httpSessao implements ObjectOrd {
 		int nv=0;
 		for (Enumeration e = sessoes.elements();e.hasMoreElements();) {
 			httpSessao s = (httpSessao)e.nextElement();
-			aq.gravaLinha(s.httpSessaoV());
-			nv++;
+			if (s.valid) {
+				aq.gravaLinha(s.httpSessaoV());
+				nv++;
+			}
 		}
 		aq.fecha();
 		logs.grava("fim","sessoes salvas "+nv);
@@ -183,6 +189,7 @@ public class httpSessao implements ObjectOrd {
 	//********************************
 	public String toString() {
 		return "(<b>sessao</b>: id="+id+" ip="+ip
+			+(!valid||data.ms()-dataa>vence?"<p style=\"color:red;\">sessão  I N V Á L I D A !</p>":"")
 			+((usuario!=null)?" usu="+usuario:"")+")";
 	}
 	//********************************
@@ -240,6 +247,9 @@ public class httpSessao implements ObjectOrd {
 		return id;
 	}
 	//********************************
+	protected httpSessao() {
+	}
+	//********************************
 	private httpSessao(String ln) {
 		String v[] = str.palavraA(ln,"\t");
 		id = v[0];
@@ -248,11 +258,14 @@ public class httpSessao implements ObjectOrd {
 		usuario = Usuario.get(id,str.leftAt(v[3],"~"));
 		usuario.UsuarioSet(v[3]);
 		host = v[4];
-		ip = v[5];
-		browser = v[6];
-		datac = str.longo(v[7],-1);
-		dataa = str.longo(v[8],-1);
-		datav = str.longo(v[9],-1);		
+		//valid = v[5].equals("true");
+		//ip = v[5];
+		//browser = v[6];
+		datac = str.longo(v[5],-1);
+		dataa = str.longo(v[6],-1);
+		datav = str.longo(v[7],-1);		
+		nv = str.inteiro(v[8],-1);
+		valid = data.ms()-dataa<vence;
 	}
 	//********************************
 	private String httpSessaoV() {
@@ -261,24 +274,18 @@ public class httpSessao implements ObjectOrd {
 			+"\t"+conf
 			+"\t"+usuario.UsuarioV()
 			+"\t"+host
-			+"\t"+ip
-			+"\t"+browser
+			//+"\t"+ip
+			//+"\t"+valid
 			+"\t"+datac
 			+"\t"+dataa
 			+"\t"+datav
-			+"\t"+dados		
+			+"\t"+dados
+			+"\t"+nv		
 		;
 	}	
 	//********************************
 	protected httpSessao(Http ht) {
-		//executa apenas 1 vez
-		if (nsLimite == -1) {
-			nsLimite = str.inteiro((String)ht.cnf.get("maxSessoes"),100);
-			logs.grava("Http maxSessoes="+nsLimite);
-			//Runtime.getRuntime().addShutdownHook(new salva());
-			sessoesInit();
-		}
-		
+
 		Socket sk = ht.sp;
 		Pedido ped = ht.pedido;
 		Hashtable hr = ped.getCab();
@@ -305,7 +312,7 @@ public class httpSessao implements ObjectOrd {
 		}
 		browser = str.seVazio((String)hr.get("user-agent"),"?");
 		//logs.grava("teste"+ip+browser+datac);
-		id = httpSessao.novoId(ip+browser+datac);
+		id = novoId(ip,browser);
 		//logs.grava("id="+id);
 		nova = true;
 		logs.grava("sessao","NOVA: "+this);
@@ -318,7 +325,7 @@ public class httpSessao implements ObjectOrd {
 			"<br>"+usuario+"<br><font size=1>"+browser+
 			"<br>dadS="+dados.size()+"<br>"+dados;
 	}
-	//********************************
+	/* *******************************
 	private boolean valida(String ipa,String br) {
 		boolean r = (ip.equals(ipa) && browser.equals(br));
 		if (!r) {
@@ -328,6 +335,7 @@ public class httpSessao implements ObjectOrd {
 		}
 		return r;
 	}
+	*/
 	private boolean valida(Socket sk,Hashtable pd) {
 		String ipn,brn;
 		brn = str.seVazio((String)pd.get("user-agent"),"?");
@@ -339,7 +347,13 @@ public class httpSessao implements ObjectOrd {
 		} else {
 			ipn = (String)pd.get("remote_addr");
 		}
-		return valida(ipn,brn);
+		if (valAnt.equals(ipn+brn+datac)) {
+			return true;
+		} else {
+			valid = id.equals(novoId(ipn,brn));
+			if (valid) valAnt = ipn+brn+datac;
+			return valid;
+		}
 	}
 	//********************************
 	//********************************
@@ -369,10 +383,15 @@ public class httpSessao implements ObjectOrd {
 		String k;
 		httpSessao s;
 		int nr=0;
-		//padrão: limpa sessões de mais de 2 horas sem acesso
+		//padrão: limpa sessões de mais logonSegs sem acesso
 		//   ou criadas há 20seg s/nenhum acesso
 		//   chamar limpeza automática a cada 20 novas sessões 
-		long tv = (ped==null?1000*60*60*2:str.longo(ped.getString("t"),-1));
+		
+		// 2horas ou "t"? do pedido? ===> adm class?
+		long tv = Math.max(
+					ped==null?0:str.longo(ped.getString("t"),-1)
+					,str.longo(Guarani.getCfg("logonSegs"),60*15)*1000
+				);
 		long ta=data.ms();
 		if (ped!=null) ped.on("<table border=1>"
 			+"<tr><td aling=center colspan=4>Removendo maiores que "
@@ -380,8 +399,10 @@ public class httpSessao implements ObjectOrd {
 		for (Enumeration e = sessoes.keys() ; e.hasMoreElements() ;) {
 			k = (String)e.nextElement();
 			s = (httpSessao)sessoes.get(k);
-			if ((ta-s.dataa>tv && ta-s.datac>30000 && s.dataa!=0)
-				|| (s.dataa==0 && ta-s.datac>20000) ) {
+			if	(
+					(s.dataa!=0 && ta-s.dataa>tv)
+				||	(s.dataa==0 && ta-s.datac>20000)
+				) {
 				nr++;
 				if (ped!=null) ped.on("<tr><td>"+nr+s.mostra());
 				sessoes.remove(k);
@@ -391,9 +412,15 @@ public class httpSessao implements ObjectOrd {
 			+nr+"</table>");
 	}
 	//********************************
-	private static String novoId(String expr) {
+	private String novoId(String ip,String nav) {
+		//toDo - país ip (mas se for interna)...
+		String v[] = nav.replace('/',' ').split(" ");
+		String expr = "";
+		for (short i=0;i<v.length;i++) {
+			expr += v[i].length()==0?"?":v[i].charAt(0);
+		}
 		//logs.grava("mdr="+expr);
-		byte r1[] = br.org.guarani.util.digito.md5(expr);
+		byte r1[] = br.org.guarani.util.digito.md5(expr+data.strSql(datac));
 		//logs.grava("mdr="+(new String(r1)));
 		int t = r1.length;
 		char r[] = new char[t];
@@ -413,6 +440,14 @@ public class httpSessao implements ObjectOrd {
 	}
 	//********************************
 	protected synchronized static httpSessao getSessao(Http ht) {
+		
+		//executa apenas 1 vez
+		if (nsLimite == -1) {
+			nsLimite = str.inteiro((String)ht.cnf.get("maxSessoes"),100);
+			logs.grava("Http maxSessoes="+nsLimite);
+			//Runtime.getRuntime().addShutdownHook(new salva());
+			sessoesInit();
+		}
 		
 		Socket sk = ht.sp;
 		Pedido ped = ht.pedido;

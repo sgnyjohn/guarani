@@ -89,7 +89,7 @@ class GravadorHttp extends Gravador {
 			outb.write(buf,0,t);
 			outb.flush();
 		} catch (Exception e) {
-			erro("gravaBuf",e);
+			erro("gravadorHttp.gravaBuf",e);
 		}	
 	}
 }

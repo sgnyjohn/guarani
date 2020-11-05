@@ -16,27 +16,33 @@ public class data {
 	private static SimpleDateFormat fusHttp;
 
 	//*********************************
+	public static String tempo(long ms) {
+		ms = ms/1000;
+		int s = Math.floorMod(ms,60);ms=Math.floorDiv(ms,60);
+		int m = Math.floorMod(ms,60);ms=Math.floorDiv(ms,60);
+		int h = Math.floorMod(ms,24);ms=Math.floorDiv(ms,24);
+		return ms+"d "+h+"h "+m+"m "+s+"s";
+	}
+	//*********************************
 	public static long ms(String st) {
 		if (str.vazio(st)) {
 			return data.ms(); 
 		}
 		//lert('strToData: '+str);
 		//falta hora?
-		int h[] = null;
-		if (st.indexOf(" ")==-1) {
-			h = new int[]{0,0,0,0};
-		} else {
-			String v[] = str.palavraA(str.substrAt(st," "),":");
+		int h[] = new int[]{0,0,0,0};
+		if (st.indexOf(" ")!=-1) {
+			//tem hora.
+			String v[] = str.palavraA(str.substrAt(st," ")+":0:0:0",":");
 			st = str.leftAt(st," ");
 			if (v[2].indexOf(".")!=-1) {
 				h[3] = str.inteiro(str.substrAt(v[2],"."),-1);
-				h[2] = str.inteiro(str.leftAt(v[2],"."),-1);
-			} else {
-				h[3] = 0;
+				v[2] = str.leftAt(v[2],".");
 			}
 			h[0] = str.inteiro(v[0],-1);
 			h[1] = str.inteiro(v[1],-1);
 			h[2] = str.inteiro(v[2],-1);
+			//logs.grava("0="+h[0]+" 1="+h[1]+" 2="+h[2]);
 		}
 		// d/m/y
 		if (st.indexOf("/")!=-1) {

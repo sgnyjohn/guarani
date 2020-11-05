@@ -41,7 +41,9 @@ public abstract class Gravador { //extends OutputStreamWriter { //PrintWriter {
 	public void erro(String m,Exception e) {
 		erro = true;
 		sErro = m;
-		logs.grava("servidor","ERRO no Gravador ==> "+m+" "+str.erro(e));
+		if ((""+e).indexOf("Pipe")==-1) {
+			logs.grava("servidor","ERRO no Gravador ==> "+m+" "+e);
+		}
 	}
 	/******************************
 	public void println();

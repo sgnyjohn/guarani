@@ -30,7 +30,7 @@ public class cgiBash extends PagV {
 			//log("vai exec q="+ped.queryString+" q="+q+" script = "+s);
 			Process pr = Runtime.getRuntime().exec(
 				new String[]{bash,s} // bash e script
-				,new String[]{"QUERY_STRING="+(str.vazio(q)?"":q.substring(1))} //query
+				,new String[]{"_guarani=1","QUERY_STRING="+(str.vazio(q)?"":q.substring(1))+""} //query
 				,new File(str.leftRat(s,"/")) //dir exec
 			);
 			String l="",line;
