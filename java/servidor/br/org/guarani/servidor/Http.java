@@ -1177,7 +1177,96 @@ class Http extends ProtocoloAbstrato {
 
 
 /*
-	ver página: http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.txt
+ 
+
+continue download file 
+ 
+
+ GET /player/dados/fila/1169~Neobratimost.2002.BDRip-AVC_Sborka_grab777.mkv HTTP/1.1
+User-Agent: Wget/1.20.3 (linux-gnu)
+Accept: *'/*
+Accept-Encoding: identity
+Host: 10.11.12.5:8080
+Connection: Keep-Alive
+
+HTTP/1.1 200 OK
+Content-Type: video/x-matroska
+Accept-Ranges: bytes
+ETag: "2909173415"
+Last-Modified: Sat, 31 Oct 2020 09:47:48 GMT
+Content-Length: 2472168734
+Date: Thu, 05 Nov 2020 13:36:07 GMT
+Server: lighttpd/1.4.53
+=======================================================================================
+GET /player/dados/fila/1169~Neobratimost.2002.BDRip-AVC_Sborka_grab777.mkv HTTP/1.1
+Range: bytes=128148333-
+User-Agent: Wget/1.20.3 (linux-gnu)
+Accept: *'/*
+Accept-Encoding: identity
+Host: 10.11.12.5:8080
+Connection: Keep-Alive
+
+HTTP/1.1 206 Partial Content
+Content-Type: video/x-matroska
+Accept-Ranges: bytes
+ETag: "2909173415"
+Last-Modified: Sat, 31 Oct 2020 09:47:48 GMT
+Content-Range: bytes 128148333-2472168733/2472168734
+Content-Length: 2344020401
+Date: Thu, 05 Nov 2020 13:38:20 GMT
+Server: lighttpd/1.4.53
+==========
+mpv
+=========
+GET /player/dados/fila/1169~Neobratimost.2002.BDRip-AVC_Sborka_grab777.mkv HTTP/1.1
+User-Agent: libmpv
+Accept: *'/*
+Range: bytes=0-
+Connection: close
+Host: 10.11.12.5:8080
+Icy-MetaData: 1
+==========
+HTTP/1.1 206 Partial Content
+Content-Type: video/x-matroska
+Accept-Ranges: bytes
+ETag: "2909173415"
+Last-Modified: Sat, 31 Oct 2020 09:47:48 GMT
+Content-Range: bytes 0-2472168733/2472168734
+Content-Length: 2472168734
+Connection: close
+Date: Thu, 05 Nov 2020 14:34:07 GMT
+Server: lighttpd/1.4.53
+=====
+GET /player/dados/fila/1169~Neobratimost.2002.BDRip-AVC_Sborka_grab777.mkv HTTP/1.1
+User-Agent: libmpv
+Accept: *'/*
+Range: bytes=2472157854-
+Connection: close
+Host: 10.11.12.5:8080
+Icy-MetaData: 1
+
+HTTP/1.1 206 Partial Content
+Content-Type: video/x-matroska
+Accept-Ranges: bytes
+ETag: "2909173415"
+Last-Modified: Sat, 31 Oct 2020 09:47:48 GMT
+Content-Range: bytes 2472157854-2472168733/2472168734
+Content-Length: 10880
+Connection: close
+Date: Thu, 05 Nov 2020 14:43:34 GMT
+Server: lighttpd/1.4.53
+
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 	ver página: http://www.w3.org/Protocols/HTTP/1.1/draft-ietf-http-v11-spec-01.txt
 
 	The individual values of the numeric status codes defined for
 			HTTP/1.1, and an example set of corresponding Reason-Phrase's, are

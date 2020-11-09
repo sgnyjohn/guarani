@@ -284,13 +284,11 @@ public class httpSessao implements ObjectOrd {
 		;
 	}	
 	//********************************
-	protected httpSessao(Http ht) {
-
+	private void init(Http ht) {
+		//
 		Socket sk = ht.sp;
 		Pedido ped = ht.pedido;
 		Hashtable hr = ped.getCab();
-		datac = data.ms();
-		//tipo de acesso
 		if (hr.get("x-forwarded-server")!=null) {
 			//por proxy ou apache proxy
 			ip = (String)hr.get("x-forwarded-for");
@@ -311,6 +309,12 @@ public class httpSessao implements ObjectOrd {
 			host = ip;
 		}
 		browser = str.seVazio((String)hr.get("user-agent"),"?");
+	}
+	//********************************
+	protected httpSessao(Http ht) {
+		datac = data.ms();
+		//init
+		init(ht);
 		//logs.grava("teste"+ip+browser+datac);
 		id = novoId(ip,browser);
 		//logs.grava("id="+id);
@@ -460,6 +464,7 @@ public class httpSessao implements ObjectOrd {
 				logs.grava("sessao","ip invalido sessao.id="+id+" sk="+sk);
 				r = null;
 			}
+			//qual ip
 		}
 		if (r==null) {
 			//logs.grava("sk="+sk+" pd="+pd);
@@ -470,10 +475,15 @@ public class httpSessao implements ObjectOrd {
 			r = new httpSessao(ht);
 			id = r.getId();
 			sessoes.put(id,r);
-		} else if (r.nova) {
-			r.nova = false;
+		} else {
+			if (r.nova) r.nova = false;
+			//se sessao foi recuperada de arquivo não há ip
+			if (r.ip == null) {
+				r.init(ht);
+			}
 		}
 		httpSessao.limSessao();
+		
 		
 		r.nv++;
 		return r;
