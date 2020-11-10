@@ -75,6 +75,7 @@ public class Pedido {
 	public boolean chunked = false;
 	public String outArq = null;
 	boolean naoSessao = false;
+	boolean keepAlive = false;
 
 	public boolean naoSessao() {
 		return naoSessao;

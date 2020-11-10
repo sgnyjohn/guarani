@@ -104,7 +104,6 @@ class Http extends ProtocoloAbstrato {
 		nPedidos++;
 		in = System.currentTimeMillis();
 		pd = new Hashtable();
-		int x;
 		
 		String raizWeb="/";
 
@@ -196,14 +195,16 @@ class Http extends ProtocoloAbstrato {
 		//criar sessão?
 		if (!erro && rodando && classe) {
 			if (naoSessao()) {
+				//sessão fake
 				httpSessao sessao = sessaoN;
 				sessao.dataa = data.ms();
 				pedido.setSessao(sessao);
 				pedido.naoSessao = true;
 			} else {
+				//conecta/cria sessão
 				httpSessao sessao = httpSessao.getSessao(this);
 				String dsv = (String)pd.get("?endereco");
-				x = dsv.indexOf("_GS_");
+				int x = dsv.indexOf("_GS_");
 				if (sessao==null) {
 					deb("sessao null");
 					//1o acesso
@@ -211,44 +212,22 @@ class Http extends ProtocoloAbstrato {
 						Thread.sleep(1000);
 					} catch (Exception e) {
 					}
-					dsv = (dsv.indexOf("?")==-1 ?dsv+"?" :dsv+"&"+"_GSI_="+data.ms());
+					dsv = (dsv.indexOf("?")==-1 ?dsv+"?":dsv+"&")+"_GSI_="+data.ms();
+					//no keep alive
 					movTemp(dsv,null);
-				} else if (sessao.nova) {
-					if (x!=-1) {
-						deb("sessao nova -1");
-						if (str.equals(get1,"/adm.class?op=stop")) {
-							if ( (sessao.ip.equals("127.0.0.1")||sessao.ip.equals("0:0:0:0:0:0:0:1")) && !pedido.proxy ) {
-								logs.grava("seguranca","stop aceito ip="+sessao.ip+" proxy="+(pedido.proxy?"true":"false"));
-								Guarani.stop(0);
-								rodando = false;
-							} else {
-								logs.grava("seguranca","tentativa inválida de stop ip="+sessao.ip
-									+" proxy="+(pedido.proxy?"true":"false")
-								);
-							}
-						} else {
-							resp(httpVer+" 200 OK");
-							o.print(cabPrg+lf
-								+"<html><h1>Browser não aceita cookie"
-								+"<br>em: "+data.strSql()
-								+"<br>cookies: "+pedido.cook
-								+"<br>"+httpSessao.nomeCook+": "+pedido.cook.get(httpSessao.nomeCook)
-								+"</h1></html>"
-							);
-							logs.grava("servidor","não aceita cookie: "+pedido+"<br>pd="+pd);
-						}
-					} else {
-						//deb("sessao nova setar cook");
-						//resp(httpVer+" 302 Moved Temporarily");
-						dsv = (dsv.indexOf("?")==-1?dsv+"?"	:dsv+"&")	+"_GS_="+data.ms();
-						//l ogs.grava("sessao","set cook dsv="+dsv);
-						/*o.print(cabPrg
-							+"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()+";Path=/"+lf
-							+ "Content-Length: "+movTemp.length()+lf				
-							+"Location: "+dsv+lf
-							+lf+movTemp
+				} else if (sessao.nova) { //flag criado no getSessao
+					if (x!=-1) { //tem param _GS_ e não tem cookie
+						resp(httpVer+" 200 OK");
+						o.print(cabPrg+lf
+							+"<html><h1>Browser não aceita cookie"
+							+"<br>em: "+data.strSql()
+							+"<br>cookies: "+pedido.cook
+							+"<br>"+httpSessao.nomeCook+": "+pedido.cook.get(httpSessao.nomeCook)
+							+"</h1></html>"
 						);
-						*/
+						logs.grava("servidor","não aceita cookie: "+pedido+"<br>pd="+pd);
+					} else {
+						dsv = (dsv.indexOf("?")==-1?dsv+"?"	:dsv+"&")	+"_GS_="+data.ms();
 						movTemp(dsv,
 							"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()
 							+";Expires="+data.strHttp(data.ms()+3600000l*24*365)
@@ -257,21 +236,13 @@ class Http extends ProtocoloAbstrato {
 						//logs.grava("vcto sessão="+data.strHttp(data.ms()+3600000*24*365));
 					}
 					rodando = false;
-				} else if (x!=-1) {
+				} else if (x!=-1) { //aceita cookie, desvia url original
 					//deb("sessao confirma");
 					sessao.confirma();
 					dsv = dsv.substring(0,x-1);
-					//l ogs.grava("sessao","sessao confirma dsv="+dsv);
-					/*resp(httpVer+" 302 Moved Temporarily");
-					o.print("Location: "+dsv+lf
-						+cabPrg
-						+ "Content-Length: "+movTemp.length()+lf				
-						+lf+movTemp
-					);
-					*/
 					movTemp(dsv,null);
 					rodando = false;
-				} else {
+				} else { //
 					//setar sessão pedido...
 					//deb("sessao ok");
 					sessao.dataa = data.ms();
@@ -543,6 +514,7 @@ class Http extends ProtocoloAbstrato {
 					sPedido = "";
 
 				} else if (nl==1) {
+					//1a linha
 					try {
 						pd.put("?",str.leftAt(sPedido," "));
 						pd.put("?endereco",str.substrAtRat(sPedido," "," "));
@@ -578,7 +550,6 @@ class Http extends ProtocoloAbstrato {
 		}
 
 	}
-
 	//********************************
 	//le POST
 	protected void lePost() {
@@ -1177,7 +1148,22 @@ class Http extends ProtocoloAbstrato {
 
 
 /*
- 
+
+Keep-Alive: timeout=5, max=1000
+READ TIMEOUT JAVA
+	* https://stackoverflow.com/questions/804951/is-it-possible-to-read-from-a-inputstream-with-a-timeout
+	* java/teste/readTimeOut.java
+
+
+wireshark ip.dst==10.11.12.5
+
+# OK
+	ip.dst==10.11.12.5
+
+# sintaxe ok, mas não pega as respostas... 
+	ip.dst==10.11.12.5 && (tcp.dstport==8080 || tcp.port==8080)
+
+Keep-Alive: timeout=5, max=1000 
 
 continue download file 
  
