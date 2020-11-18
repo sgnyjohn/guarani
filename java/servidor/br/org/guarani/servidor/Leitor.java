@@ -7,6 +7,7 @@ package br.org.guarani.servidor;
 import java.io.*;
 import java.net.*;
 import javax.servlet.*;
+import br.org.guarani.util.logs;
 
 //***************************//
 public class Leitor implements javax.servlet.ServletInputStream {
@@ -34,7 +35,7 @@ public class Leitor implements javax.servlet.ServletInputStream {
 						return null;
 					} else {
 						//sleep 1/16 - toDo - variável conforme uso cpu
-						(new Thread()).sleep(msTimeOut/16);
+						try { Thread.sleep(msTimeOut/16); } catch (Exception e) {};
 					}
 				}
 			}
@@ -42,7 +43,6 @@ public class Leitor implements javax.servlet.ServletInputStream {
 			if (c1==-1) {
 				break;
 			}
-			tp--;
 			bf[t++] = (byte)c1;
 		}
 		if (t>0 && bf[t-1]=='\n') t--;

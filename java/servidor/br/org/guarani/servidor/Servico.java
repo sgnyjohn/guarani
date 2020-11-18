@@ -165,7 +165,7 @@ public class Servico implements Runnable {
 					}
 				}
 				if (atendido==-1) {
-					logs.grava("servidor",cla+", LOTADO!!, esperando..."+(lt++)+" sp="+sp);
+					logs.grava("servidor",nome+"="+cla+", LOTADO!!, tent=("+i+") esperando..."+(lt++)+" sp="+sp);
 					if (lt==5) {
 						logTarefasTrancadas();
 					} else if (lt>200) {

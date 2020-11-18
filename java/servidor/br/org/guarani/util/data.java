@@ -18,9 +18,9 @@ public class data {
 	//*********************************
 	public static String tempo(long ms) {
 		ms = ms/1000;
-		int s = Math.floorMod(ms,60);ms=Math.floorDiv(ms,60);
-		int m = Math.floorMod(ms,60);ms=Math.floorDiv(ms,60);
-		int h = Math.floorMod(ms,24);ms=Math.floorDiv(ms,24);
+		int s = (int)Math.floorMod(ms,60);ms=Math.floorDiv(ms,60);
+		int m = (int)Math.floorMod(ms,60);ms=Math.floorDiv(ms,60);
+		int h = (int)Math.floorMod(ms,24);ms=Math.floorDiv(ms,24);
 		return ms+"d "+h+"h "+m+"m "+s+"s";
 	}
 	//*********************************

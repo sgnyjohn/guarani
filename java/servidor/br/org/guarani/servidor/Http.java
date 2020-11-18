@@ -1,5 +1,11 @@
 /*
 	* sjohn@via-rs.net jan/2001 - 
+	* @sgnyjohn out/2020 - Accept-Ranges: bytes
+	* @sgnyjohn nov/2020 - keep-alive
+	* 
+	* keepalive
+	* 	le pedido, responde com o keep timeout, e volta a ler com timeout
+	* 
 */
 package br.org.guarani.servidor;
 
@@ -30,6 +36,10 @@ class Http extends ProtocoloAbstrato {
 		+"Cache-Control: no-store"+lf
 		+"Content-Type: "+Guarani.tipos.getTipo(".html")+"; charset="+charset+lf
 	;
+	//timeout para keepAlive
+	static int timeOutLN = 2000;
+	static int timeOutPD = timeOutLN*3;
+	
 	httpSessao sessaoN; //sessão não sessão
 
 	protected boolean multiPart = false;
@@ -39,7 +49,7 @@ class Http extends ProtocoloAbstrato {
 
 	protected String get, geto, param, term, ext, get1,permissao;
 	protected Hashtable cnf;
-	protected File arq;
+	//protected File arq;
 	protected boolean classe,debugp=false,servlet;
 	protected Pedido pedido;
 
@@ -53,8 +63,9 @@ class Http extends ProtocoloAbstrato {
  
 	String dirIgnora[],dirClasse[][],naoSessao[];
 	
-	boolean getIsDir = false;
 	boolean https = false;
+	int npc;
+	
 	//*************************************************
 	public String detalhePedido() {
 		return pedido.toString();
@@ -67,8 +78,9 @@ class Http extends ProtocoloAbstrato {
 	}
 	//********************************
 	public void movTemp(String url, String cb) {
-		resp(httpVer+" 302 Moved Temporarily");
-		o.print(cabPrg
+		o.print(httpVer+" 302 Moved Temporarily"+lf
+			+respp()
+			+cabPrg
 			+(str.vazio(cb)?"":str.trimm(cb)+lf)
 			//2020/set + "Content-Length: "+movTemp.length()+lf				
 			+ "Content-Length: 0"+lf				
@@ -100,10 +112,10 @@ class Http extends ProtocoloAbstrato {
 		return false;
 	}
 	//********************************
+	// atende uma conexão
 	public void run() {
 		nPedidos++;
 		in = System.currentTimeMillis();
-		pd = new Hashtable();
 		
 		String raizWeb="/";
 
@@ -113,230 +125,164 @@ class Http extends ProtocoloAbstrato {
 			logs.grava("servidor","erro antes de abrir stream!!");
 		}
 
+		//loop keepAlive
+		npc = 0;
+		while (!erro && rodando) {
 
-		if (!erro & rodando) {
-			lePedido();
-			if (pd.size()==0) {
-				// 2017-dez o firefox? abre o socket  e fecha...
-				erro = true;
-				geto = "PEDIDO vazio!!";
-			} else if ((get1 = (String)pd.get("?endereco"))==null) {
-				erro = true;
-				logs.grava("servidor",new Exception("pedido invalido!"),
-					"sk="+sp+" pd="+pd);
-			} else {
-				//ogs.grava("g="+get1);
-    
-				//dirIgnora - ajp13 e apache proxy
-				if (dirIgnora!=null) {
-					for (short i=0;i<dirIgnora.length;i++) {
-						//ogs.grava("dirIg="+dirIgnora[i]+" "+get1);
-						if (str.equals(get1,dirIgnora[i])) {
-							get1 = "/"+get1.substring(dirIgnora[i].length());
-							//l ogs.grava("dirIgRes="+dirIgnora[i]+" "+get1);
-							raizWeb = dirIgnora[i];
-							break;
-						}
-					}
-				}
-				
-				//dirClasse - para baixar arquivos validado com nome original
-				// redireciona todos os pedidos para o dir, ou sub-dir deste, para uma classe
-				// pode ser usado para cgi... --> dirClasse=/player/=/cgiBash.class
-				if (dirClasse!=null) {
-					for (short i=0;i<dirClasse.length;i++) {
-						// 0="o dir"  1=antes'?' 2=apos'?'
-						//ogs.grava(i+" geto="+geto+" get1="+get1+" d="+dirClasse[i][0]);
-						if (str.equals(get1,dirClasse[i][0])) {
-							int p = get1.indexOf("?");
-							String arg;
-							if (p==-1) {
-								arg = dirClasse[i][2]+get1;
-							} else {
-								arg = dirClasse[i][2]+get1.substring(0,p)
-									+"&"+get1.substring(p+1)
-								;
+			if (!erro & rodando) {
+				lePedido();
+				if (!rodando) {
+				} else if (erro) {
+				} else if ((get1 = (String)pd.get("?endereco"))==null) {
+					erro = true;
+					logs.grava("servidor","?endereco pedido invalido!"
+						+" pd="+pd+" sk="+sp
+					);
+				} else {
+					//ogs.grava("g="+get1);
+		
+					//dirIgnora - ajp13 e apache proxy
+					if (dirIgnora!=null) {
+						for (short i=0;i<dirIgnora.length;i++) {
+							//ogs.grava("dirIg="+dirIgnora[i]+" "+get1);
+							if (str.equals(get1,dirIgnora[i])) {
+								get1 = "/"+get1.substring(dirIgnora[i].length());
+								//l ogs.grava("dirIgRes="+dirIgnora[i]+" "+get1);
+								raizWeb = dirIgnora[i];
+								break;
 							}
-							//l ogs.grava("de: "+get1);
-							get1 = dirClasse[i][1]+"?"+arg;
-							//http://localhost/baixarwwws/Pessoa/Anexos/Pessoa/0%7e%7e75_safecor_proposta.sxw%7e%7e1097155648000%7e%7e13547/safecor_proposta.sxw
-							//l ogs.grava("para: "+get1);
-							break;
 						}
 					}
+					
+					//dirClasse - para baixar arquivos validado com nome original
+					// redireciona todos os pedidos para o dir, ou sub-dir deste, para uma classe
+					// pode ser usado para cgi... --> dirClasse=/player/=/cgiBash.class
+					if (dirClasse!=null) {
+						for (short i=0;i<dirClasse.length;i++) {
+							// 0="o dir"  1=antes'?' 2=apos'?'
+							//ogs.grava(i+" geto="+geto+" get1="+get1+" d="+dirClasse[i][0]);
+							if (str.equals(get1,dirClasse[i][0])) {
+								int p = get1.indexOf("?");
+								String arg;
+								if (p==-1) {
+									arg = dirClasse[i][2]+get1;
+								} else {
+									arg = dirClasse[i][2]+get1.substring(0,p)
+										+"&"+get1.substring(p+1)
+									;
+								}
+								//l ogs.grava("de: "+get1);
+								get1 = dirClasse[i][1]+"?"+arg;
+								//http://localhost/baixarwwws/Pessoa/Anexos/Pessoa/0%7e%7e75_safecor_proposta.sxw%7e%7e1097155648000%7e%7e13547/safecor_proposta.sxw
+								//l ogs.grava("para: "+get1);
+								break;
+							}
+						}
+					}
+
+					//l ogs.grava("g1="+get1);
+		
 				}
-
-				//l ogs.grava("g1="+get1);
-    
 			}
-		}
-  
-		//POST
-		if (!erro & rodando) {
-			pedido = new Pedido(this,pd);
-			pedido.raizWeb = raizWeb;
-			pedido.setOut(o,sp);
+	  
+			//POST
+			if (!erro & rodando) {
+				pedido = new Pedido(this,pd);
+				pedido.raizWeb = raizWeb;
+				pedido.setOut(o,sp);
 
-			if (((String)pd.get("?")).equals("POST")) {
-				lePost();
+				if (((String)pd.get("?")).equals("POST")) {
+					lePost();
+				}
 			}
-		}
 
-		//analisa PEDIDO
-		if (!erro & rodando) {
-			try {
-				analizaPedido();
-			} catch (Exception e) {
-				erro = true;
-				logs.grava("servidor",e,"analise pedido="+pd+" socket="+sp);
+			//analisa PEDIDO
+			if (!erro & rodando) {
+				try {
+					analizaPedido();
+				} catch (Exception e) {
+					erro = true;
+					logs.grava("servidor",e,"analise pedido="+pd+" socket="+sp);
+				}
 			}
-		}
 
-		//criar sessão?
-		if (!erro && rodando && classe) {
-			if (naoSessao()) {
-				//sessão fake
-				httpSessao sessao = sessaoN;
-				sessao.dataa = data.ms();
-				pedido.setSessao(sessao);
-				pedido.naoSessao = true;
-			} else {
-				//conecta/cria sessão
-				httpSessao sessao = httpSessao.getSessao(this);
-				String dsv = (String)pd.get("?endereco");
-				int x = dsv.indexOf("_GS_");
-				if (sessao==null) {
-					deb("sessao null");
-					//1o acesso
-					try {
-						Thread.sleep(1000);
-					} catch (Exception e) {
-					}
-					dsv = (dsv.indexOf("?")==-1 ?dsv+"?":dsv+"&")+"_GSI_="+data.ms();
-					//no keep alive
-					movTemp(dsv,null);
-				} else if (sessao.nova) { //flag criado no getSessao
-					if (x!=-1) { //tem param _GS_ e não tem cookie
-						resp(httpVer+" 200 OK");
-						o.print(cabPrg+lf
-							+"<html><h1>Browser não aceita cookie"
-							+"<br>em: "+data.strSql()
-							+"<br>cookies: "+pedido.cook
-							+"<br>"+httpSessao.nomeCook+": "+pedido.cook.get(httpSessao.nomeCook)
-							+"</h1></html>"
-						);
-						logs.grava("servidor","não aceita cookie: "+pedido+"<br>pd="+pd);
-					} else {
-						dsv = (dsv.indexOf("?")==-1?dsv+"?"	:dsv+"&")	+"_GS_="+data.ms();
-						movTemp(dsv,
-							"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()
-							+";Expires="+data.strHttp(data.ms()+3600000l*24*365)
-							+";Path=/"
-						);
-						//logs.grava("vcto sessão="+data.strHttp(data.ms()+3600000*24*365));
-					}
-					rodando = false;
-				} else if (x!=-1) { //aceita cookie, desvia url original
-					//deb("sessao confirma");
-					sessao.confirma();
-					dsv = dsv.substring(0,x-1);
-					movTemp(dsv,null);
-					rodando = false;
-				} else { //
-					//setar sessão pedido...
-					//deb("sessao ok");
+			//criar sessão?
+			if (!erro && rodando && classe) {
+				if (naoSessao()) {
+					//sessão fake - srv arquivos? cgi?
+					httpSessao sessao = sessaoN;
 					sessao.dataa = data.ms();
 					pedido.setSessao(sessao);
+					pedido.naoSessao = true;
+				} else {
+					//conecta/cria sessão
+					httpSessao sessao = httpSessao.getSessao(this);
+					String dsv = (String)pd.get("?endereco");
+					int x = dsv.indexOf("_GS_");
+					if (sessao==null) {
+						deb("sessao null");
+						//1o acesso
+						try {
+							Thread.sleep(1000);
+						} catch (Exception e) {
+						}
+						dsv = (dsv.indexOf("?")==-1 ?dsv+"?":dsv+"&")+"_GSI_="+data.ms();
+						//no keep alive
+						movTemp(dsv,null);
+						rodando = false;
+					} else if (sessao.nova) { //flag criado no getSessao
+						if (x!=-1) { //tem param _GS_ e não tem cookie
+							o.print(httpVer+" 200 OK"+lf
+								+respp()
+								+cabPrg
+								+lf
+								+"<html><h1>Browser não aceita cookie"
+								+"<br>em: "+data.strSql()
+								+"<br>cookies: "+pedido.cook
+								+"<br>"+httpSessao.nomeCook+": "+pedido.cook.get(httpSessao.nomeCook)
+								+"</h1></html>"
+							);
+							logs.grava("servidor","não aceita cookie: "+pedido+"<br>pd="+pd);
+						} else {
+							dsv = (dsv.indexOf("?")==-1?dsv+"?"	:dsv+"&")	+"_GS_="+data.ms();
+							movTemp(dsv,
+								"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()
+								+";Expires="+data.strHttp(data.ms()+3600000l*24*365)
+								+";Path=/"+lf
+							);
+							//logs.grava("vcto sessão="+data.strHttp(data.ms()+3600000*24*365));
+						}
+						rodando = false;
+					} else if (x!=-1) { //aceita cookie, desvia url original
+						//deb("sessao confirma");
+						sessao.confirma();
+						dsv = dsv.substring(0,x-1);
+						movTemp(dsv,null);
+						rodando = false;
+					} else { //
+						//setar sessão pedido...
+						//deb("sessao ok");
+						sessao.dataa = data.ms();
+						pedido.setSessao(sessao);
+					}
 				}
 			}
-		}
-
-		//analiza se modificado
-		if (!erro && rodando && !classe) {
-			//cgi = Guarani.tipos.getCgi(ext); cgi==null & 
-			if (!classe & !getIsDir) {
-				arqModificado();
-			}
-		}
-
-		if (!erro & rodando) {
-
-			//monta cebecalho
-			pedido.cab = httpVer+" 200 OK"+lf+respp();
-			if (classe || getIsDir) { //|| cgi!=null
-				pedido.cab += cabPrg
-					+ "Connection: close"+lf;
-			} else {
-				//arquivo
-				/*pedido.cab +=
-							"Content-Type: "+Guarani.tipos.getTipo(ext)+lf
-					+ "Last-Modified: "+data.strHttp(arq.lastModified())+lf
-					+ "Content-Length: "+arq.length()+lf
-					+ "Connection: close"+lf;
-				*/
-			}
-
-			//gera a resposta
-			if (classe) {
-				//classes compiladas com serv start
-				if (servlet) {
-					pedido.servletP = new Hashtable();
-					pedido.servletP.put("?",pd);
-					pedido.servletP.put("Gconf",servlets.get(servletN));
+		
+			if (!erro && rodando) {
+				pedido.keepAlive = true;
+				npc++; //nro do pedido da conex
+				pedidoResponde();
+				if (!pedido.keepAlive) {
+					break;
 				}
-    
-				if (geto.indexOf(".obj")!=-1) {
-					geto = str.troca(geto,".obj",".class");
-				}
-				Guarani.execClasse(geto,pedido,o,0);
-
-			} else if (getIsDir) {
-				mostradir(get,geto);
-
-			} else if ((ext.equals(".class") || ext.equals(".java"))
-						& get.indexOf("applets")<0) {
-				o.println("<html><h1>Extenssão invalida="+get+" "+ext+"</h1></html>");
-
-			} else {
-				//if (true)cgi==null) {
-					//o.print(pedido.cab+lf);
-					mandaArq(""+arq,null,false);
-				//} else {
-				//	execCgi(cgi);
-				//}
 			}
+			
+		} //fim keep alive...
+		if (npc>1) {
+			logs.grava("keepAlive","conex nResp("+npc+") pd.end("+pd.get("?end")+")");
 		}
-
-		geto = data.strSql(in)+" "+geto+"<br>"+sp;
- 
-		//FLUSH
-		try {
-			o.flush();
-		} catch (Exception e) {
-			erro = true;
-			logs.grava("servidor",geto+", o.flush(): "+e);
-		}
-
-		/*problema com ajp13
-		//SHUTDOWN
-		try {
-			if (sp!=null) {
-				sp.shutdownOutput();
-			}
-		} catch (IOException e) {
-			//logs.grava("task",geto+", sp.shutdownOutput(): "+e);
-		}
-
-		try {
-			if (sp!=null) {
-				sp.shutdownInput();
-			}
-		} catch (IOException e) {
-			//logs.grava("task",geto+", sp.shutdownInput(): "+e);
-		}
-		*/
-
-		//CLOSE
+		
+		//CLOSE conex e pedido
 		if (pedido!=null) {
 			// null acontece qdo auth ssl falho...
 			pedido.close();
@@ -346,14 +292,14 @@ class Http extends ProtocoloAbstrato {
 			o.close();
 		} catch (Exception e) {
 			//erro = true;
-			//logs.grava("task",geto+", o.close(): "+e);
+			logs.grava("servidor",geto+", o.close(): "+e);
 		}
   
 		try {
 			if (i!=null) i.close();
 		} catch (Exception e) {
 			//erro = true;
-			//logs.grava("task",geto+", i.close(): "+e);
+			logs.grava("servidor",geto+", i.close(): "+e);
 		}
    
 		try {
@@ -362,16 +308,67 @@ class Http extends ProtocoloAbstrato {
 			}
 			sp = null;
 		} catch (IOException e) {
-			//logs.grava("task",geto+", sp.close(): "+e);
+			logs.grava("servidor",geto+", sp.close(): "+e);
 		}
 
 		fi = System.currentTimeMillis();
 		tempo += fi-in;
 		rodando = false;
 		return;
+	
+	}
+	//********************************
+	//atende pedido
+	//RESPONDE.
+	void pedidoResponde() {
+		//aqui sempre keepAlive.
+
+		if (!erro & rodando) {
+
+			//gera a resposta
+			if (classe) {
+				pedido.cab = httpVer+" 200 OK"+lf
+					+respp()
+					+cabPrg
+				;
+				//classes compiladas com serv start
+				if (servlet) {
+					pedido.servletP = new Hashtable();
+					pedido.servletP.put("?",pd);
+					pedido.servletP.put("Gconf",servlets.get(servletN));
+				}
+				if (geto.indexOf(".obj")!=-1) {
+					geto = str.troca(geto,".obj",".class");
+				}
+				Guarani.execClasse(geto,pedido,o,0);
+
+			//} else if (getIsDir) {
+			//	mostradir(get,geto);
+
+			} else if ((ext.equals(".class") || ext.equals(".java")) && get.indexOf("applets")<0) {
+				o.print(httpVer+" 200 OK"+lf
+					+respp()
+					+cabPrg
+					+lf
+					+"<html><h1>Extenssão invalida="+get+" "+ext+"</h1></html>"
+				);
+
+			} else {
+				mandaArq(www_root+geto,null,false);
+			}
+		}
+
+		//geto = data.strSql(in)+" "+geto+"<br>"+sp;
+ 
+		//FLUSH
+		try {
+			o.flush();
+		} catch (Exception e) {
+			erro = true;
+			logs.grava("servidor",geto+", o.flush(): "+e);
+		}
 
 	}
-
 	//********************************
 	//atende pedido
 	protected void abreStream() {
@@ -476,6 +473,11 @@ class Http extends ProtocoloAbstrato {
 	//seta socket
 	public void setSocket(Socket s) {
 		sp = s;
+		try {
+			sp.setSoTimeout(timeOutPD);
+		} catch (Exception e) {
+			logs.grava("keepAlive","erro sp.setSoTimeout(timeOutPD); "+e);
+		}
 		erro = false;
 		classe = false;
 		servlet = false;
@@ -500,32 +502,55 @@ class Http extends ProtocoloAbstrato {
 		String sPedido = " ",np,pr;
 		int nl = 0;
 
+		//timeout para ler todo o pedido e 3x o informado ao browser
+		long tt = System.currentTimeMillis();
+
+		//init novo has pedido
+		pd = new Hashtable();
+
 		try {
-			while (sPedido.length()!=0 & rodando & !erro) {
+			while (rodando && !erro) {
 				//pedido = new String(i.readLine().getBytes());
-				//sPedido = i.readLine();
 				sPedido = i.readLine();
+				//sPedido = i.readLine(timeOutLN);
 				if (debugp) {
 					logs.grava("debug",sPedido);
 				}
 				nl++;
-				if (sPedido==null) {
-					erro = true;
-					sPedido = "";
-
+				if (str.vazio(sPedido)) {
+					pd.put("?end,",sPedido+","+npc);
+					if (nl==1) {
+						if (npc==0) {
+							logs.grava("keepAlive","linha vazia lendo Pedido, ln("+sPedido
+								+") sp("+sp+") ped("+pd+")"
+							);
+							erro = true;			
+						} else {
+							rodando = false;
+						}
+					} else {
+						//fim pedido
+						break;
+					}
+				} else if (System.currentTimeMillis()-tt>timeOutPD) {
+					logs.grava("keepAlive","lePedido timeout ("+timeOutPD
+						+" < "+(System.currentTimeMillis()-tt)+") lido="+pd.size()
+					);
+						
 				} else if (nl==1) {
 					//1a linha
 					try {
 						pd.put("?",str.leftAt(sPedido," "));
 						pd.put("?endereco",str.substrAtRat(sPedido," "," "));
 						pd.put("?protocolo",str.rightAt(sPedido," "));
-					} catch (Throwable e) {
+					} catch (Exception e) {
 						logs.grava("seguranca","pedido invalido tam="+sPedido.length()+
 							" ped="+sPedido
 						);
+						erro = true;
 					}
 
-				} else if (sPedido.length()!=0) {
+				} else {
 					np = str.leftAt(sPedido,":").toLowerCase();
 					pr = str.substrAt(sPedido," ");
 					if (np.equals("keep-alive")) {
@@ -535,11 +560,23 @@ class Http extends ProtocoloAbstrato {
 				}
 			}
 
+
+		} catch (SocketTimeoutException iex) {
+			pd.put("?end","tmO,"+npc);
+			if (npc==0) {
+				erro = true;			
+				logs.grava("keepAlive","timeout lendo Pedido, ln lidas="+nl
+					+"<br>sp="+sp+"<br>ped="+pd
+				);
+			} else {
+				rodando = false;
+			}
 		} catch (IOException ioe) {
 			//2017-dez - ssh para cada pedido faz um vazio ?
 			if (nl!=0) {
 				logs.grava("servidor",ioe,"lendo Pedido, ln lidas="+nl
-					+"<br>sp="+sp+"<br>ped="+pd);
+					+"<br>sp="+sp+"<br>ped="+pd
+				);
 				erro = true;
 				geto = "ERRO LENDO PEDIDO!!";
 			}
@@ -706,7 +743,8 @@ class Http extends ProtocoloAbstrato {
 	//********************************
 	//analiza pedido 2020/set
 	void analizaPedido() {
-		getIsDir = false;
+		
+		
 		get = ""+get1; //(String)pd.get("?endereco");
 		//fazer isto no caso de ser arquivo,
 		//senão os parametros devem ser decoded 1 a 1 
@@ -771,23 +809,14 @@ class Http extends ProtocoloAbstrato {
 			&& get.indexOf("applets")<0);
 		if (classe) return;
 
-		//arq = new Arq(URLDecoder.decode(get));
+		/*arq = new Arq(URLDecoder.decode(get));
 		arq = new File(get);
 		if (!arq.exists() || !arq.canRead()) {
-			String ss = str.UnEscape(get)+": Arquivo não existe\t'"
-				+geto+"'\t'"+get+"'\t"+pd.get("referer")+"\t"+sp;
-			logs.grava("servidor","nexiste="+ss);
-			resp(httpVer+" 404 Not Found");
-			o.println();
-			o.println("<html><body>Http: Não existe!!</body></html>");
-
-			rodando = false;
-			erro = true;
 		} if (!arq.isDirectory()) {
 			return;
 		}
 		
-		//é diretório
+		/* é diretório
 		//ogs.grava("é diretório "+get+" o="+geto);
 		if ( get.charAt(get.length()-1) != '/' ) {
 			//ogs.grava("vai redir "+get);
@@ -807,131 +836,30 @@ class Http extends ProtocoloAbstrato {
 		//vai mostrar dir
 		//ogs.grava("vai mostrar dir "+get+" ="+arq);
 		getIsDir = true;
+		*/
 		
 	}
-	/********************************
-	//analiza pedido - ate 2020/set
-	void analizaPedido() {
-		get = ""+get1; //(String)pd.get("?endereco");
-		//fazer isto no caso de ser arquivo,
-		//senão os parametros devem ser decoded 1 a 1 
-		//get = URLDecoder.decode(get); 
-		int i = get.indexOf('?');
-		if (i!=-1) {
-			pedido.setGet(get.substring(i+1,get.length()));
-			get = get.substring(0,i);
-		}
-
-		//segurança, descoberta fábio
-		//não permitir endereços com ..
-		//o que permite ler toda a unidade
-		//em caso do serv ter permissão para isto
-		//talvez tenha outras possibilidades... 
-		if (get.indexOf("..")>-1) {
-			o.println("Erro, pedido inválido...");
-			geto = "ERRO, uso de .. "+get;
-			erro = true;
-			return;
-		}
-
-		//ver extenção
-		ext = "";
-		i = get.lastIndexOf(".");
-		int i1 = get.lastIndexOf("/");
-		if (i>-1 & i1<i) {
-			ext = get.substring(i,get.length());
-			//l ogs.grava("ext -> "+ext);
-		}
-
-		geto = get;
-		get = www_root+get;
-		//diretório virtual?
-		if (www_vdirs!=null) {
-			String s = geto.substring(1);
-			//l ogs.grava(s);
-			s = "/"+str.leftAt(s,"/")+"/";
-			//l ogs.grava(s);
-			String s1 = (String)www_vdirs.get(s);
-			//l ogs.grava(s1);
-			if (s1!=null) get = s1+geto.substring(s.length()-1);
-		}
-
-		if (ext=="") {
-			if ((new File(get + "/index.html")).exists()) {
-				ext = ".html";
-				get = get + ((get.substring(get.length()-1,get.length()).equals("/")) ? "" : "/")+"index.html";
-			} else {
-				//é servlet...?
-				for (Enumeration e = servlets.elements() ; e.hasMoreElements() ;) {
-					String s[] = (String[])e.nextElement();
-					//l ogs.grava("servlet","TESTANDO geto="+geto);
-					if (str.equals(geto,s[1])) {
-						//l ogs.grava("servlet","detect servlet="+get);
-						ext = ".class";
-						geto = s[2];
-						servlet = true;
-						servletN = s[0];
-						break;
-					}
-				}
-				if (ext=="") {
-					ext = "dir";
-				}
-			}
-		}
-
-		classe = ((ext.equals(".class")||ext.equals(".obj")) 
-			&& get.indexOf("applets")<0);
-
-		//existe arquivo?
-		if (!classe) {
-			//arq = new Arq(URLDecoder.decode(get));
-			arq = new File(str.UnEscape(get));
-			if (!arq.exists() || !arq.canRead()) {
-				String ss = str.UnEscape(get)+": Arquivo não existe\t'"
-					+geto+"'\t'"+get+"'\t"+pd.get("referer")+"\t"+sp;
-				logs.grava("servidor","nexiste="+ss);
-				resp(httpVer+" 404 Not Found");
-				o.println();
-				o.println("<html><body>Http: Não existe!!</body></html>");
-
-				rodando = false;
-				erro = true;
-			}
-		}
-	}*/
-	//********************************
-	//arq Modificado
-	private void arqModificado() {
-		String s = (String)pd.get("if-modified-since");
-		if (s!=null) {
-			if (s.indexOf(";")>-1) s = str.leftAt(s,";");
-			//rever falta verif tamanho
-			if (s.equals(data.strHttp(arq.lastModified()))) {
-				resp(httpVer+" 304 Not Modified");
-				o.println();
-
-				rodando = false;
-			}
-		}
-	}
 	//********************************
 	//resposta padrao
-	void resp(String ln1) {
-		o.println(ln1);
-		o.print(respp());
-	}
-	//********************************
-	//resposta padrao
-	protected String respp() {
+	public String respp() {
 		return //"Server: Guarani 1.1"+lf+
-									"Date: "+data.strHttp()+lf;
+				"Date: "+data.strHttp()+lf
+				+(pedido.keepAlive
+					?"Keep-Alive: timeout="+(timeOutLN/1000)+", max=1000"+lf
+					:"Connection: close"+lf
+				)
+			;
 	}
 	//********************************
 	//mostra dir
-	private void mostradir(String dir,String geto) {
+	private void mostradir(String dir) {
 		String d = dir.substring(www_root.length());
-		pedido.on("<html><head><title>Diretório: "+d+"</title>"
+		pedido.cab = respp()+cabPrg;
+		pedido.cab = httpVer+" 200 OK"+lf
+			+respp()
+			+cabPrg
+		;
+		pedido.on("<html><head><title>Dir: <b>"+d+"</b></title>"
 			+"\n<script src=\"/js/func.js\"></script>"
 			+"\n<script src=\"/js/funcoes.js\"></script>"
 			+"\n<script src=\"/js/funcoes1.js\"></script>"
@@ -999,28 +927,80 @@ class Http extends ProtocoloAbstrato {
 			...
 			Range: bytes=0-
 			Range: bytes=2472157854-
-		 */
-		if (nome==null) {
-			nome = str.substrRat(nArq,"/");
-		}
-		if (nArq.indexOf("..")!=-1) {
+		*/
+
+		if (nArq.indexOf("../")!=-1) {
 			logs.grava("seguranca","ataque-ERRO, Http.mandaArq "+nArq+" ped="+pedido);
 			logs.grava("baixa","ataque-ERRO, Http.mandaArq "+nArq+" ped="+pedido);
 			return false;
 		}
-		String ext = "."+(str.substrRat(nome,".").toLowerCase());
+
 		File arq = new File(nArq);
-		if (!arq.exists()) {
-			resp(httpVer+" 404 Not Found");
-			o.println();
-			o.println("<html><body>Http: Não existe!!</body></html>");
+		
+		//existe?
+		if (!arq.exists() || !arq.canRead()) {
+			logs.grava("servidor","pdSize("+pd.size()+") arq("
+				+arq+") file not found narq("+nArq+") get("
+				+geto+") ref("+pd.get("referer")+") "+sp
+			);
+			o.print(httpVer+" 404 Not Found"+lf
+				+respp()
+				+lf
+				+"<html><body>not found!!</body></html>"
+			);
 			return false;
 		}
+
+		//é diretório
+		//ogs.grava("é diretório "+get+" o="+geto);
+		if (arq.isDirectory()) {
+			//é dir mas endereço não tem a barra final... adiciona barra final
+			if (nArq.charAt(nArq.length()-1) != '/' ) {
+				//ogs.grava("vai redir "+get);
+				get = get.substring(www_root.length())+"/";
+				movTemp(get,null);
+				return true;
+			}
+			
+			if ((new File(arq+"/index.html")).exists()) {
+				//ogs.grava("TEM "+get+" ="+arq);
+				arq = new File(arq+"/index.html");
+			} else {
+				mostradir(""+arq);
+				return true;
+			}
+			
+		}		
+
+		//mime
+		if (nome==null) {
+			nome = str.substrRat(""+arq,"/");
+		}
+		String ext = "."+(str.substrRat(nome,".").toLowerCase());
 		//mime type
 		String tp = ""+Guarani.tipos.getTipo(ext);
+		//ogs.grava("ext("+ext+") tp("+tp+")");
 		if (str.equals(tp,"text/")) {
 			tp += "; charset="+charset;
 		}
+
+		
+		//arq Modificado
+		String s = (String)pd.get("if-modified-since");
+		if (s!=null) {
+			if (s.indexOf(";")>-1) s = str.leftAt(s,";");
+			//rever falta verif tamanho
+			if (s.equals(data.strHttp(arq.lastModified()))) {
+				o.print(httpVer+" 304 Not Modified"+lf
+					+ "Content-Type: "+tp+lf
+					+respp()
+					+lf
+				);
+				return true;
+			}
+		}
+		
+
 		//range?
 		String rg = (String)pd.get("range");
 		long pi=0,pf=0;
@@ -1036,10 +1016,9 @@ class Http extends ProtocoloAbstrato {
 			+ "Accept-Ranges: bytes"+lf
 			+ (rg==null
 				? 	"Content-Length: "+arq.length()+lf
-				:	"Content-Length: "+(pf-pi+1)+lf
+				:	"Content-Length: "+(pf-pi)+lf
 					+"Content-Range: bytes "+pi+"-"+(pf-1)+"/"+arq.length()+lf
 			  )
-			+ "Connection: close"+lf
 		;
 		//ogs.grava(ext+"="+pedido.cab+"\n===>"+pd);
 		o.print(pedido.cab+lf);
@@ -1076,7 +1055,7 @@ class Http extends ProtocoloAbstrato {
 				}
 			}
 			r.close();
-		} catch (IOException e ) {
+		} catch (Exception e ) {
 			nBytes += env;
 			logs.grava("baixa","ERRO, Http.mandaArq "+nArq
 				+" e="+e+" bytes Env="+env+" usu="+pedido //str.erro(e)
@@ -1085,15 +1064,16 @@ class Http extends ProtocoloAbstrato {
 			//o.println(e.toString());
 			return false;
 		}
-		//logs.grava("baixa","env="+env+" nv="+nv+" bloco="+(env/nv));
-		/*logs.grava("baixa","OK, Http.mandaArq "
-			+" by/segs: "+num.format(env*1.0/(data.ms()-t),1)
-			+" by len / env: "+num.format(arq.length(),0)+" / "+num.format(env,0)
-			+" "+nArq
-			+ " - Last-Modified: "+data.strHttp(arq.lastModified())
-			+" ped="+pedido.ip+" "
-		);
-		*/ 
+		if (data.ms()-t>5000) 
+			logs.grava("baixa","OK, msecs > 5000 "
+				+" by/secs=("+(env*1.0/(data.ms()-t))+")"
+				+" by len / env=("+num.format(arq.length(),0)+" / "+num.format(env,0)+")"
+				+" rg=("+rg+")"
+				+" arq=("+arq+")"
+				+" ip=("+pedido.ip+")"
+				//+" pd=("+pedido.ped+")"
+				//+" Last-Modified("+data.strHttp(arq.lastModified())+")"
+			);
 		return true;
 	}
 	/********************************
