@@ -269,7 +269,12 @@ class Http extends ProtocoloAbstrato {
 			}
 		
 			if (!erro && rodando) {
-				pedido.keepAlive = true;
+				//Connection: Keep-Alive
+				//Connection: close
+				// 1 - apenas keepalive se não foi solicitado close
+				String c = (String)pd.get("Connection");
+				double f = str.duplo(str.substrAt((String)pd.get("?protocolo"),"/"),1);
+				pedido.keepAlive = f>1 && (c==null || !c.equals("close"));
 				npc++; //nro do pedido da conex
 				pedidoResponde();
 				if (!pedido.keepAlive) {
@@ -572,6 +577,7 @@ class Http extends ProtocoloAbstrato {
 				rodando = false;
 			}
 		} catch (IOException ioe) {
+			pd.put("?end","erIO,"+npc);
 			//2017-dez - ssh para cada pedido faz um vazio ?
 			if (nl!=0) {
 				logs.grava("servidor",ioe,"lendo Pedido, ln lidas="+nl
