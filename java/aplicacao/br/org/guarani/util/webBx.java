@@ -33,6 +33,7 @@ public class webBx extends web implements Runnable {
 	//****************************************
 	//envia o q está sendo baixado como THREAD
 	public String mandaBx(Pedido pd,cache c) {
+		//pd.chucked = false;
 		int nv = 0;
 		while (!c.f.exists()) {
 			nv++;

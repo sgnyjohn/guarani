@@ -99,7 +99,7 @@ public class Pedido {
 	}
 
 	//***********************************
-	public PrintWriter getWriter() {
+	public PrintWriter xxgetWriter() {
 		try {
 			return new PrintWriter(out.outb);
 		} catch (Exception e) {
@@ -564,6 +564,7 @@ public class Pedido {
 	//**************************************/
 	public void close() {
 		if (chunked) {
+			//fim chunk
 			out.print("0"+Http.lf+Http.lf);
 		}
 		out.close();
@@ -577,9 +578,9 @@ public class Pedido {
 		//falta enviar Cabeçalho?
 		if (cab!=null) {
 			//sOutAnt = a;
-			chunked = (outArq==null) && cab.indexOf("Content-Type: text/html")!=-1;
-			chunked = false; //sj2017
-			//logs.grava(" (outArq==null)="+outArq+" c="+chunked);
+			//chunked = (outArq==null) && cab.indexOf("Content-Type: text/html")!=-1;
+			chunked = false; //sj2017 //sj2020/11 http/2 incompatível
+			//ogs.grava(" (outArq==null)="+outArq+" c="+chunked);
 			out.print(str.trimm(cab," \r\n")
 				+(chunked?Http.lf+"Transfer-Encoding: chunked":"")
 				+Http.lf
@@ -599,7 +600,10 @@ public class Pedido {
 				//a = str.trimm(a);
 				//tm = a.length();
 				//logs.grava("t="+tm+" "+str.strBase(tm,16));
+				//2020/11 out.print(str.strBase(tm,16).toUpperCase()+Http.lf+a+Http.lf);
+				//Chunked transfer encoding is not supported in HTTP/2, which provides its own mechanisms for data streaming.[2] 2015
 				out.print(str.strBase(tm,16).toUpperCase()+Http.lf+a+Http.lf);
+				//logs.grava("chunk",str.strBase(tm,16).toUpperCase()+"\t"+a);
 			} else {
 				out.print(a);
 			}

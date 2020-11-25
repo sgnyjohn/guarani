@@ -129,60 +129,58 @@ class Http extends ProtocoloAbstrato {
 		npc = 0;
 		while (!erro && rodando) {
 
-			if (!erro & rodando) {
-				lePedido();
-				if (!rodando) {
-				} else if (erro) {
-				} else if ((get1 = (String)pd.get("?endereco"))==null) {
-					erro = true;
-					logs.grava("servidor","?endereco pedido invalido!"
-						+" pd="+pd+" sk="+sp
-					);
-				} else {
-					//ogs.grava("g="+get1);
-		
-					//dirIgnora - ajp13 e apache proxy
-					if (dirIgnora!=null) {
-						for (short i=0;i<dirIgnora.length;i++) {
-							//ogs.grava("dirIg="+dirIgnora[i]+" "+get1);
-							if (str.equals(get1,dirIgnora[i])) {
-								get1 = "/"+get1.substring(dirIgnora[i].length());
-								//l ogs.grava("dirIgRes="+dirIgnora[i]+" "+get1);
-								raizWeb = dirIgnora[i];
-								break;
-							}
+			lePedido();
+			if (!rodando) {
+			} else if (erro) {
+			} else if ((get1 = (String)pd.get("?endereco"))==null) {
+				erro = true;
+				logs.grava("servidor","?endereco pedido invalido!"
+					+" pd="+pd+" sk="+sp
+				);
+			} else {
+				//ogs.grava("g="+get1);
+	
+				//dirIgnora - ajp13 e apache proxy
+				if (dirIgnora!=null) {
+					for (short i=0;i<dirIgnora.length;i++) {
+						//ogs.grava("dirIg="+dirIgnora[i]+" "+get1);
+						if (str.equals(get1,dirIgnora[i])) {
+							get1 = "/"+get1.substring(dirIgnora[i].length());
+							//l ogs.grava("dirIgRes="+dirIgnora[i]+" "+get1);
+							raizWeb = dirIgnora[i];
+							break;
 						}
 					}
-					
-					//dirClasse - para baixar arquivos validado com nome original
-					// redireciona todos os pedidos para o dir, ou sub-dir deste, para uma classe
-					// pode ser usado para cgi... --> dirClasse=/player/=/cgiBash.class
-					if (dirClasse!=null) {
-						for (short i=0;i<dirClasse.length;i++) {
-							// 0="o dir"  1=antes'?' 2=apos'?'
-							//ogs.grava(i+" geto="+geto+" get1="+get1+" d="+dirClasse[i][0]);
-							if (str.equals(get1,dirClasse[i][0])) {
-								int p = get1.indexOf("?");
-								String arg;
-								if (p==-1) {
-									arg = dirClasse[i][2]+get1;
-								} else {
-									arg = dirClasse[i][2]+get1.substring(0,p)
-										+"&"+get1.substring(p+1)
-									;
-								}
-								//l ogs.grava("de: "+get1);
-								get1 = dirClasse[i][1]+"?"+arg;
-								//http://localhost/baixarwwws/Pessoa/Anexos/Pessoa/0%7e%7e75_safecor_proposta.sxw%7e%7e1097155648000%7e%7e13547/safecor_proposta.sxw
-								//l ogs.grava("para: "+get1);
-								break;
-							}
-						}
-					}
-
-					//l ogs.grava("g1="+get1);
-		
 				}
+				
+				//dirClasse - para baixar arquivos validado com nome original
+				// redireciona todos os pedidos para o dir, ou sub-dir deste, para uma classe
+				// pode ser usado para cgi... --> dirClasse=/player/=/cgiBash.class
+				if (dirClasse!=null) {
+					for (short i=0;i<dirClasse.length;i++) {
+						// 0="o dir"  1=antes'?' 2=apos'?'
+						//ogs.grava(i+" geto="+geto+" get1="+get1+" d="+dirClasse[i][0]);
+						if (str.equals(get1,dirClasse[i][0])) {
+							int p = get1.indexOf("?");
+							String arg;
+							if (p==-1) {
+								arg = dirClasse[i][2]+get1;
+							} else {
+								arg = dirClasse[i][2]+get1.substring(0,p)
+									+"&"+get1.substring(p+1)
+								;
+							}
+							//l ogs.grava("de: "+get1);
+							get1 = dirClasse[i][1]+"?"+arg;
+							//http://localhost/baixarwwws/Pessoa/Anexos/Pessoa/0%7e%7e75_safecor_proposta.sxw%7e%7e1097155648000%7e%7e13547/safecor_proposta.sxw
+							//l ogs.grava("para: "+get1);
+							break;
+						}
+					}
+				}
+
+				//l ogs.grava("g1="+get1);
+	
 			}
 	  
 			//POST
@@ -268,6 +266,7 @@ class Http extends ProtocoloAbstrato {
 				}
 			}
 		
+			//responde 
 			if (!erro && rodando) {
 				//Connection: Keep-Alive
 				//Connection: close
@@ -284,7 +283,7 @@ class Http extends ProtocoloAbstrato {
 			
 		} //fim keep alive...
 		if (npc>1) {
-			logs.grava("keepAlive","conex nResp("+npc+") pd.end("+pd.get("?end")+")");
+			logs.grava("keepAlive","conex nResp("+npc+")");
 		}
 		
 		//CLOSE conex e pedido
@@ -332,6 +331,7 @@ class Http extends ProtocoloAbstrato {
 
 			//gera a resposta
 			if (classe) {
+				pedido.keepAlive = false;
 				pedido.cab = httpVer+" 200 OK"+lf
 					+respp()
 					+cabPrg
@@ -404,7 +404,7 @@ class Http extends ProtocoloAbstrato {
 		nPedidos = 0;
 		nBytes = 0;
 		
-		chunk = (cnf.get("chunk")==null?"1":cnf.get("chunk")).equals("1");
+		chunk = cnf.get("chunk")==null || cnf.get("chunk").equals("1");
 
 		//cabHtml = "Content-Type: "+Guarani.tipos.getTipo(".html")+lf;
 
@@ -517,13 +517,19 @@ class Http extends ProtocoloAbstrato {
 			while (rodando && !erro) {
 				//pedido = new String(i.readLine().getBytes());
 				sPedido = i.readLine();
+				if (System.currentTimeMillis()-tt>timeOutPD) {
+					logs.grava("keepAlive","lePedido timeout ("+timeOutPD
+						+" < "+(System.currentTimeMillis()-tt)+") lido="+pd.size()
+					);
+				}
+
 				//sPedido = i.readLine(timeOutLN);
 				if (debugp) {
 					logs.grava("debug",sPedido);
 				}
 				nl++;
 				if (str.vazio(sPedido)) {
-					pd.put("?end,",sPedido+","+npc);
+					pd.put("?end,","vazio,nl="+nl);
 					if (nl==1) {
 						if (npc==0) {
 							logs.grava("keepAlive","linha vazia lendo Pedido, ln("+sPedido
@@ -537,10 +543,6 @@ class Http extends ProtocoloAbstrato {
 						//fim pedido
 						break;
 					}
-				} else if (System.currentTimeMillis()-tt>timeOutPD) {
-					logs.grava("keepAlive","lePedido timeout ("+timeOutPD
-						+" < "+(System.currentTimeMillis()-tt)+") lido="+pd.size()
-					);
 						
 				} else if (nl==1) {
 					//1a linha
@@ -567,7 +569,6 @@ class Http extends ProtocoloAbstrato {
 
 
 		} catch (SocketTimeoutException iex) {
-			pd.put("?end","tmO,"+npc);
 			if (npc==0) {
 				erro = true;			
 				logs.grava("keepAlive","timeout lendo Pedido, ln lidas="+nl
@@ -577,7 +578,6 @@ class Http extends ProtocoloAbstrato {
 				rodando = false;
 			}
 		} catch (IOException ioe) {
-			pd.put("?end","erIO,"+npc);
 			//2017-dez - ssh para cada pedido faz um vazio ?
 			if (nl!=0) {
 				logs.grava("servidor",ioe,"lendo Pedido, ln lidas="+nl
@@ -586,6 +586,8 @@ class Http extends ProtocoloAbstrato {
 				erro = true;
 				geto = "ERRO LENDO PEDIDO!!";
 			}
+		} catch (Exception e) {
+			logs.grava("ERROxxx="+str.erro(e));
 		}
   
 		if (debugp) {
@@ -860,6 +862,7 @@ class Http extends ProtocoloAbstrato {
 	//mostra dir
 	private void mostradir(String dir) {
 		String d = dir.substring(www_root.length());
+		pedido.keepAlive = false;
 		pedido.cab = respp()+cabPrg;
 		pedido.cab = httpVer+" 200 OK"+lf
 			+respp()
