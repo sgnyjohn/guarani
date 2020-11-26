@@ -8,10 +8,12 @@ import br.org.guarani.util.*;
 
 	import java.net.*;
 	import java.io.*;
-	import java.lang.*;
+	import java.lang.*; 
 	import java.util.*;
 
 public interface Protocolo extends Runnable {
+	//*************************************************
+	public String detalhePedido();
 	//********************************
 	public ServerSocket criaServerSocket(int porta) throws IOException;
 

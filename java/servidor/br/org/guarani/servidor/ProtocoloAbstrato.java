@@ -16,9 +16,7 @@ public abstract class ProtocoloAbstrato implements Protocolo {
 	protected Socket sp; //soket pedido
 	protected boolean rodando,erro;
 	protected long tempo,in,fi,nPedidos,nBytes;
-	//keep-alive
-	protected long keepAlive,keepAliveN;
-	protected boolean keepAliveB;
+	protected long keepAlive;
 
 	//*************************************************
 	public String detalhePedido() {

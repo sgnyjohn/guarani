@@ -68,7 +68,7 @@ class Http extends ProtocoloAbstrato {
 	
 	//*************************************************
 	public String detalhePedido() {
-		return pedido.toString();
+		return ""+pedido;//.toString();
 	}
 	//********************************
 	public Object getConf(String s) {
@@ -283,6 +283,7 @@ class Http extends ProtocoloAbstrato {
 			
 		} //fim keep alive...
 		if (npc>1) {
+			keepAlive += npc-1;
 			logs.grava("keepAlive","conex nResp("+npc+")");
 		}
 		
