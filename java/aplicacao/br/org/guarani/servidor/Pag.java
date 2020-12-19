@@ -539,6 +539,7 @@ public class Pag implements Prg {
 	public void js() {
 		dirs();
 		//on("<script>//TTTTM sj</script>");
+		incluiJs("func.js");
 		incluiJs("funcoes.js");
 		incluiJs("funcoes1.js");
 		incluiJs("dialogo.js");
@@ -570,7 +571,8 @@ public class Pag implements Prg {
 			//+"<html>"
 			//2020-08 +"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//BR\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n"
 			//2020-08 +"<html xmlns=\"http://www.w3.org/1999/xhtml\">\n"
-			+"<!doctype html><html>"
+			+"<!DOCTYPE html>"
+			+"<html>"
 			+"<head><title>"
 			//libCopia +((titulo==null)?"":titulo+" - ")+Web+"</title>"
 			+((titulo==null)?"":titulo)+"</title>\n"
