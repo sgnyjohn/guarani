@@ -32,7 +32,7 @@ public class web {
 	int nAg;
 	public String agent = null;
 	public String locat; //movido, endereço final...
-	public String agentV[] = {
+	static public String agentV[] = {
 			"Mozilla/5.0 (Windows; U; Windows NT 5.1; pt-BR; rv:1.8.1.4) Gecko/20070515 Firefox/2.0.0.4"
 			,"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.0; HbTools 4.6.4; .NET CLR 2.0.50727)"
 			,"Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 2.0.50727)"

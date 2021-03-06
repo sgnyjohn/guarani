@@ -956,7 +956,7 @@ class Http extends ProtocoloAbstrato {
 			o.print(httpVer+" 404 Not Found"+lf
 				+respp()
 				+lf
-				+"<html><body>not found!!</body></html>"
+				+"<html><body>"+pd.get("?endereco")+" not found!!</body></html>"
 			);
 			return false;
 		}

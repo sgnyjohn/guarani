@@ -8,6 +8,13 @@ import java.lang.reflect.*;
 import java.util.*;
 import java.text.*;
 
+import java.time.LocalDate;
+import java.time.temporal.IsoFields;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
+import java.time.temporal.ChronoField;
+import java.time.DayOfWeek;
+
 //***************************************
 //***************************************
 public class data1 extends data {
@@ -17,7 +24,59 @@ public class data1 extends data {
 	public static String mesEN = ",jan,feb,mar,apr,may,jun,jul,aug,sep,oct,nov,dec";
 	public static String mesPT = ",jan,fev,mar,abr,mai,jun,jul,ago,set,out,nov,dez";
 	public static DateFormat http = new SimpleDateFormat( "E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
+	public static DateTimeFormatter weekParser = new DateTimeFormatterBuilder()
+            .appendPattern("YYYY-ww")
+            .parseDefaulting(ChronoField.DAY_OF_WEEK, DayOfWeek.SUNDAY.getValue())
+            .toFormatter(Locale.getDefault())
+  ;
 	//***************************************
+	// milisegundos as zero horas de hoje
+  public static long msZeroHora(long ms) {
+		Date d = new Date(ms);
+		return new Date(d.getYear(),d.getMonth(),d.getDay()).getTime();
+	}	
+	//***************************************
+	// milisegundos as zero horas de hoje
+  public static long msDia() {
+		return java.sql.Date.valueOf(LocalDate.now()).getTime();
+	}	
+	//***************************************
+	// semana,ano
+	public static String semanaAno() {
+		return semana(data.ms());
+	}
+	public static String semana(LocalDate ld) {
+		return ld.format( DateTimeFormatter.ISO_WEEK_DATE ).substring(0,8);
+	}
+	public static String semana(long v) {
+		LocalDate ld = LocalDate.ofEpochDay(v/dia);
+		return ld.format( DateTimeFormatter.ISO_WEEK_DATE ).substring(0,8);
+	}
+	public static LocalDate semanaToLocalDate2(String s) {
+		DateTimeFormatter weekParser = new DateTimeFormatterBuilder()
+							.appendPattern("YYYY-ww")
+							.parseDefaulting(ChronoField.DAY_OF_WEEK, DayOfWeek.SUNDAY.getValue())
+							.toFormatter(Locale.getDefault())
+		;	
+    return LocalDate.parse(s, weekParser);	
+	}
+	public static LocalDate semanaToLocalDate1(String s) {
+    return LocalDate.parse(s, weekParser);	
+	}
+	public static LocalDate semanaToLocalDate(String s) {
+		int ano = str.inteiro(str.leftAt(s,"-"),-1);
+		int sem = str.inteiro(str.right(s,2),-1);
+		LocalDate d = LocalDate.of(ano,1,1).minusDays(4-7*(sem-1));
+		while (data1.semana(d).compareTo(s)<0) {
+			d = d.plusDays(1);
+		}
+		return d;
+	}
+	public static long semanaToLong(String s) {
+		return semanaToLocalDate(s).toEpochDay()*dia-21*hora;		
+	}
+	//***************************************
+	// tempo
 	public static String diasHMS(long dif) {
 		dif = dif/1000;
 		short sg = (short)(dif%60);
