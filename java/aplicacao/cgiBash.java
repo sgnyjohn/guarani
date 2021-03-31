@@ -127,7 +127,7 @@ public class cgiBash extends PagV {
 		String ext = str.substrRat(script,".");
 		File f = new File(script);
 		if (!f.exists()) {
-			erro("script "+script+" not exists!");
+			erro("script "+script+" not exists! pd="+pd);
 		} else if (f.isDirectory()) {
 			File ia = new File(f+"/index.html");
 			if (ia.exists()) {
