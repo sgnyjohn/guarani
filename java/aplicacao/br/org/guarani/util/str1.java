@@ -15,6 +15,22 @@ public class str1 extends str {
 	long z1=(long)1053979402258.0;
 	static MessageDigest md = null;
 	//**************************************/
+	public static String palavraA(String v[][],String a,String b) {
+		String r = "";
+		for (int i=0;i<v.length;i++) {
+			if (v[i]!=null) r += palavraA(v[i],b)+a;
+		}
+		return r;
+	}
+	//**************************************/
+	public static String palavraA(String v[],String a) {
+		String r = "";
+		for (int i=0;i<v.length;i++) {
+			r += v[i]+a;
+		}
+		return r;
+	}
+	//**************************************/
 	public static String[] getChars(String s) {
 		//https://www.guj.com.br/t/duvida-com-relacao-offsetbycodepoints-da-classe-string/337218
 		//on("String: " + greeting,"p"); 

@@ -41,7 +41,7 @@ public class PagV extends Pag {
 	private final boolean validaX509() {
 		if (sessao.validaX509(ped)) {
 			usuario = sessao.getUsuario();
-			usu = usuario.getNome();
+			usu = usuario.getNome().toLowerCase();
 			return true;
 		}
 		return false;
@@ -319,7 +319,7 @@ public class PagV extends Pag {
 		//logs.grava("dog="+usuario.valido());
 		ped.debug = doGrupo("dev")?2:1;
 		
-		usu = usuario.getNome();
+		usu = usuario.getNome().toLowerCase();
 		//logs.grava("dog="+usu);
 		
 		prefInit();

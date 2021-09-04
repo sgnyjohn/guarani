@@ -54,6 +54,8 @@ public class Pag implements Prg {
 	public String meta = "";
 	
 	public String charSet = Guarani.getCfg("charset","iso-8859-1");
+	boolean cabFoi = false;
+	Hashtable cabH = new Hashtable();
 
 	//**************************************************
 	public String paramC(String s) {
@@ -565,6 +567,8 @@ public class Pag implements Prg {
 	}
 	//*****************************************//
 	public void cab(String titulo,String tit) {
+		if (cabFoi) return;
+		cabFoi = true;
 		on(""
 			//+"<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">"
 			//+"<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\">"
@@ -579,23 +583,36 @@ public class Pag implements Prg {
 			+"<meta http-equiv=\"Content-Type\" content=\"text/html; charset="+charSet+"\">\n"
 			//2020-08
 			+"<meta name=\"viewport\" content=\"width=device-width,initial-scale=1,minimal-ui\">"
+			+"<LINK REL=\"shortcut icon\" href=\"/"+icon+"\"/>"
+			+"<LINK REL=\"icon\" href=\"/"+icon+"\"/>"
 			+meta
-			+"\n</head>\n"
 		);
+
 		incluiCss(css,false);
 		js();
 		if (devCSS()) {// && !ped.msie) {
 			incluiJs("jsCSSEditor/jsCSSEditor.js");
 		}
+
+		//js e css faltantes no head...
+		//inclui outros arqs css js ...
+		for (Enumeration e = cabH.elements();e.hasMoreElements();) {
+			ped.on(""+e.nextElement());
+		}
+		
+		ped.on("\n</head>\n");
+		
 		ped.on(
-			"<body "+(estilo==null?"":"class=\""+estilo)+"\" "
-			+(devCSS()?"onClick=jsCSSEditor(this,event); ":"")
-			+"onload=evento('load') onfocus=evento('focus') "
-			+"onresize=evento('resize'); "
-			+"onblur=evento('focusOut'); onunload=evento('close'); "
+			"<body "
+			+(estilo==null?"":"class=\""+estilo+"\"")
+			+(devCSS()
+					? " onclick=\"jsCSSEditor(this,event);\""
+					: ""
+			)
+			+" onload=\"evento('load');\" onfocus=\"evento('focus');\""
+			+" onresize=\"evento('resize');\""
+			+" onblur=\"evento('focusOut');\" onunload=\"evento('close');\""
 			+">"
-			+"<LINK REL=\"shortcut icon\" href=\"/"+icon+"\"/>"
-			+"<LINK REL=\"icon\" href=\"/"+icon+"\"/>"
 		);
 
 		if (!str.vazio(tit)) {
@@ -719,11 +736,17 @@ public class Pag implements Prg {
 			return;
 		}
 		hArq.put(e,e);
-
+		
 		if (seExiste && !(new File(dirLCss+"/"+e)).exists()) {
 			return;
 		}
-		ped.on("<LINK REL=\"StyleSheet\" HREF=\""+dirCss+"/"+e+"?md5="+arqDig(dirLCss+"/"+e)+"\">");
+		
+		String s = "<LINK REL=\"StyleSheet\" HREF=\""+dirCss+"/"+e+"?md5="+arqDig(dirLCss+"/"+e)+"\">";
+		if (cabFoi) {
+			ped.on(s);
+		} else {
+			cabH.put(""+cabH.size(),s);
+		}
 	}
 	//*****************************************//
 	public void incluiJs(String e) {
@@ -739,9 +762,14 @@ public class Pag implements Prg {
 			logs.grava("incluiJs(): js="+js+" ped=null hArq="+hArq);
 		} else if (ad!=null) {
 			ped.on("");
-			ped.on("<script charset=\"UTF-8\"  language=\"JavaScript\""
+			String s = "<script charset=\"UTF-8\"  language=\"JavaScript\""
 				+" src=\""+dirJs+"/"+e+"?md5="+ad+"\"></script>"
-			);
+			;
+			if (cabFoi) {
+				ped.on(s);
+			} else {
+				cabH.put(""+cabH.size(),s);
+			}
 		}
 	}
 }
