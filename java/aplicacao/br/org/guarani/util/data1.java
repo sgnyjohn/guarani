@@ -30,6 +30,12 @@ public class data1 extends data {
             .toFormatter(Locale.getDefault())
   ;
 	//***************************************
+	// milisegundos de ququer fuso é o mesmo...
+  public static long msGMT() {
+		Calendar cal = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+		return cal.getTimeInMillis();		
+	}
+	//***************************************
 	// milisegundos as zero horas de hoje
   public static long msZeroHora(long ms) {
 		Date d = new Date(ms);

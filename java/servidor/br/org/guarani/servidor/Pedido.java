@@ -439,7 +439,8 @@ public class Pedido {
 		a = str.trimm(a);
 		String b[] = str.palavraA(a,"&");
 		for (int i=0;i<b.length;i++) {
-			String p = str.UnEscape(str.leftAt(b[i],"="));
+			int ps = b[i].indexOf("=");
+			String p = str.UnEscape(ps==-1?b[i]:b[i].substring(0,ps));
 			int x = 0;
 			while (h.get(p)!=null) {
 				p = (x==0?p:str.leftRat(p,"~"))+"~"+(x++);
@@ -447,7 +448,7 @@ public class Pedido {
 			}
 			h.put(
 				p,
-				str.UnEscape(str.substrAt(b[i],"="))
+				str.UnEscape(ps==-1?"":b[i].substring(ps+1))
 			);
 		}
 	}

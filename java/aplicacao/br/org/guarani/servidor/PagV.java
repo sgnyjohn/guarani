@@ -35,7 +35,6 @@ public class PagV extends Pag {
 	//*****************************************
 	public void js() {
 		super.js();
-		script("_sis.usu='"+usu+"';");
 	}
 	//*****************************************//
 	private final boolean validaX509() {
@@ -273,13 +272,14 @@ public class PagV extends Pag {
 			return true;
 		} else {
 			//logs.grava("logon="+usuario.valido());
-			if (usuario!=null && usuario.valido() && !usuario.validoS()) {
+			/*if (usuario!=null && usuario.valido() && !usuario.validoS()) {
 				cab("Limite usuários!!");
 				on("<h1>Limite de usuários do servidor foi atingido...</h1><p>Sua sessão foi invalidada.</p>");
 				rodap();
 				usuario.invalida();
 				return false;
-			} 
+			}
+			*/
 			if (usuario==null || !usuario.valido()) {
 				//logs.grava("usuario="+usuario);
 				if (ped.x509Val()) {
@@ -330,26 +330,26 @@ public class PagV extends Pag {
 	}
 	//*****************************************
 	public final void rodap() {
-		ped.on("<center><hr class=hrPadrao>"
-			+"<font size=1><b>"+opC("cliente")+" x</b></font>"
+		ped.on("\n\n<hr class=hrPadrao><center>"/*<hr class=hrPadrao>"
+			+"\n<font size=1><b>"+opC("cliente")+" x</b></font>"
 			+"<br><b><font size=1>"
 			+"<a href=\"http://www.3wsistemas.com.br/?classe="
 			+this.getClass().getName()
 			+"&cop="+id()
 			+"\">"+opC("setor")+"</a></font></b>"
+			*/
 		);
 		if (doGrupo("dev") && cl!=null) {
 			String a = str.troca(cl,".","\\")+".java";
-			on(" - <a href=javascript:chatAbre()>CHAT</a>"
-				+"<font size=1> ("+((System.currentTimeMillis()-tempo))+")"
-				+"<br>"
-				//+"<a href='pprsjv:\\\\sbbir001\\bluej\\Proj\\Aplicacao\\"+a+"'>"+a+"</a>"
-				//+" - <a href='pprsjv:pub:"+a+"'>Pub</a>"
-				+"<a href=javascript:objNav(document);>nav</a>"
+			on("\n<a href=javascript:chatAbre()>CHAT</a>"
+				+"\n<font size=1> ("+((System.currentTimeMillis()-tempo))+")"
+				+"\n<a href=javascript:objNav(document);>nav</a></font>"
 			);
 		}
-		ped.on("</center></body>");
-		ped.on("</html>\r\n\r\n");
+		ped.on("\n</center>"
+			+"\n\n</body>" 
+			+"\n</html>\r\n\r\n"
+		);
 	}
 
 	/* ****************************************

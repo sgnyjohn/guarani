@@ -156,6 +156,13 @@ class loader extends ClassLoader {
 			logsL.deb(1,"carregou: "+f);
 			try {
 				r = defineClass(nome,b,0,b.length);
+			} catch (java.lang.UnsupportedClassVersionError e) {
+				logsL.grava("erro"
+					,"UnsupportedClassVersionError, javac # java ?"
+						+" file="+f
+						+" ERR:"+e
+				);				
+				return null;
 			} catch (java.lang.LinkageError e) {
 				//pode ser: duplicate class definition
 				// aguarda tempo, pra pegar ela no hash então

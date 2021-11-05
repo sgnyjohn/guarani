@@ -246,7 +246,12 @@ class load {
 		clB = this.getClass().getClassLoader();
 		
 		//conf DEBUG/LOG
-		logsL.inicia(load.dTmp+"/load-",".");
+		String dt = dataL.strSql().substring(0,10);
+		if ((new File(raiz+"/logs")).isDirectory()) {
+			logsL.inicia(raiz+"/logs/"+dt+"-load-",".");
+		} else {
+			logsL.inicia(raiz+"/"+dt+"-load-",".");
+		}
 		//logsL.debNv = debNv;
 		
 		//carrega configuraçoes do loader
