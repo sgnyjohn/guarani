@@ -29,12 +29,12 @@ class Http extends ProtocoloAbstrato {
 	//public static String lf = "\r\n";
 	public static final String httpVer = "HTTP/1.1";
 	//public static final String movTemp = "<html><body>302 Moved Temporarily</body></html>"+lf+lf;
-	public static final String charset = Guarani.getCfg("charset","iso-8859-1");
+	public static final String charset = Guarani.getCfg("charset","utf-8");
 	public static final Charset charsetO = Charset.forName(charset);
 	public static final String cabPrg = 
-		"Cache-Control: private"+lf
-		+"Cache-Control: no-store"+lf
-		+"Content-Type: "+Guarani.tipos.getTipo(".html")+"; charset="+charset+lf
+		"cache-control: private"+lf
+		+"cache-control: no-store"+lf
+		+"content-type: "+Guarani.tipos.getTipo(".html")+"; charset="+charset+lf
 	;
 	//timeout para keepAlive
 	static int timeOutLN = 2000;
@@ -83,8 +83,8 @@ class Http extends ProtocoloAbstrato {
 			+cabPrg
 			+(str.vazio(cb)?"":str.trimm(cb)+lf)
 			//2020/set + "Content-Length: "+movTemp.length()+lf				
-			+ "Content-Length: 0"+lf				
-			+"Location: "+url+lf
+			+ "content-length: 0"+lf				
+			+"location: "+url+lf
 			//2020/set +lf+movTemp
 			+lf
 		);
@@ -244,9 +244,9 @@ class Http extends ProtocoloAbstrato {
 						} else {
 							dsv = (dsv.indexOf("?")==-1?dsv+"?"	:dsv+"&")	+"_GS_="+data.ms();
 							movTemp(dsv,
-								"Set-Cookie: "+httpSessao.nomeCook+"="+sessao.getId()
-								+";Expires="+data.strHttp(data.ms()+3600000l*24*365)
-								+";Path=/"+lf
+								"set-cookie: "+httpSessao.nomeCook+"="+sessao.getId()
+								+";expires="+data.strHttp(data.ms()+3600000l*24*365)
+								+";path=/"+lf
 							);
 							//logs.grava("vcto sessão="+data.strHttp(data.ms()+3600000*24*365));
 						}
@@ -599,10 +599,12 @@ class Http extends ProtocoloAbstrato {
 	//********************************
 	//le POST
 	protected void lePost() {
+		//logs.grava("le post");
 		long t = System.currentTimeMillis();
 
 		int read;
-		String ln1="",l;
+		//String ln1="",
+		String l;
 		//Content-Type: application/x-www-form-urlencoded
 		//Content-Type: multipart/form-data; boundary=---------------------------7d1295376039c
 		String tipo = (String)pd.get("content-type");
@@ -620,55 +622,72 @@ class Http extends ProtocoloAbstrato {
 			if (!lt.setPedido()) {
 				logs.grava("servidor","ERRO MultiPart tm="+tm);
 			}
-			return;
+		} else {
+			StringBuilder b = new StringBuilder();
+			try {
+				while (tm > 0 ) {
+					nr = i.read(buf, 0, ((tm>tBf) ? tBf : tm));
+					if (nr>0) {
+						tm -= nr;
+						//ln1 += new String(buf,0,nr);
+						b.append(new String(buf,0,nr));
+					} else {
+						tm = 0;
+					}
+				}
+				pedido.setPost(b.toString());
+			} catch (Exception e) {
+				logs.grava("servidor", "Http.lePost: "
+					+e+lf+" falta: "+tm+" lido: "+b.length()
+				);
+				erro = true;
+				geto = "ERRO LENDO POST!!";
+			}
 		}
+		//logs.grava("le post fim");
+		
+		/*
+			
 		//char[] cbuf = new char[1024];
 		//ogs.grava("charsetO="+charsetO);
 		try {
 			if (!multiPart) {
-				byte[] cbuf = new byte[1024];
 				while (tm > 0 ) {
-					nr = i.read(cbuf, 0, ((tm>1024) ? 1024 : tm));
+					nr = i.read(buf, 0, ((tm>tBf) ? tBf : tm));
 					if (nr>0) {
 						tm -= nr;
-						ln1 += new String(cbuf,0,nr);
+						//ln1 += new String(buf,0,nr);
+						b.append(new String(buf,0,nr));
 					} else {
 						tm = 0;
 					}
 				}
-				pedido.setPost(ln1);
-				/*
-				String s;
-				while (tm > 0 ) {
-					s = i.readLine();
-					if (s==null) break;
-					ln1 += s+"\r\n";
-					tm -= s.length()+2;
-				}
-				pedido.setGet(ln1);
-				*/
+				pedido.setPost(b.toString());
 
 			} else {
-				byte[] cbuf = new byte[1024];
+				//byte[] cbuf = new byte[1024];
 				//parece que o tomcat não trata isso, e sim permite passar
 				//para o httpservlet o inputstream...
 				logs.grava("servidor","tipo post não implementado!!");
 				//int nr,s = 0;
-				ln1="";
+				//ln1="";
+				//StringBuilder b = new StringBuilder();
 				while (tm > 0 ) {
-					nr = i.read(cbuf, 0, ((tm>1024) ? 1024 : tm));
+					nr = i.read(buf, 0, ((tm>tBf) ? tBf : tm));
 					//nr = i.read(cbuf, 0, tm);
 					//l ogs.grava("leu:"+nr+" falta: "+tm);
 					if (nr>0) {
 						tm -= nr;
-						ln1 += new String(cbuf,0,nr,charsetO);
+						//ln1 += new String(buf,0,nr,charsetO);
+						b.append(new String(buf,0,nr,charsetO));
 					} else {
 						tm = 0;
 					}
 				}
-				arquivo a = new arquivo("/tmp/teste.post");
-				a.gravaTxt(ln1);
-				if (true) return;
+				//ln1 = b.toString();
+				// arquivo a = new arquivo("/tmp/teste.post");
+				// a.gravaTxt(ln1);
+				//sj comentei em 2023-03 if (true) return;
 
 				String nm="",vr="",aq="",aqt="";
 				String bd = "--"+str.substrAtAt(tipo+" ","boundary="," ");
@@ -684,7 +703,7 @@ class Http extends ProtocoloAbstrato {
 						if (s==0) {
 							s = 1;
 						} else if (s==4) {
-							ln1 += "&"+nm+"="+vr.substring(0,vr.length()-2);
+							b.append("&"+nm+"="+vr.substring(0,vr.length()-2));
 							s = 1;
 						} else {
 							logs.grava("servidor","ERRO bd não esperado no post s="+s);
@@ -692,7 +711,7 @@ class Http extends ProtocoloAbstrato {
 
 					} else if (s==1) {
 						//nome, etc..
-						if (str.equals(l,"Content-Disposition:")) {
+						if (str.equals(l.toLowerCase(),"content-disposition:")) {
 							nm = str.substrAtAt(l," name=\"","\"");
 							aq = null;
 							vr = "";
@@ -709,8 +728,8 @@ class Http extends ProtocoloAbstrato {
 
 					} else if (s==2) {
 						//arquivo = tipo
-						if (str.equals(l,"Content-Type:")) {
-							aqt = str.substrAt(l,"Content-Type: ");
+						if (str.equals(l.toLowerCase(),"content-type:")) {
+							aqt = str.substrAt(l,": ");
 						} else {
 							logs.grava("servidor","ERRO esperado tipo arq="+l);
 						}
@@ -735,8 +754,8 @@ class Http extends ProtocoloAbstrato {
 
 					}
 				}
-				logs.grava("servidor",ln1);
-				pedido.setPost(ln1);
+				//logs.grava("servidor",ln1);
+				pedido.setPost(b.toString());
 			}
 
 		} catch (Exception e) {
@@ -745,9 +764,7 @@ class Http extends ProtocoloAbstrato {
 			erro = true;
 			geto = "ERRO LENDO POST!!";
 		}
-
-		//l ogs.grava("tempo post="+(System.currentTimeMillis()-t));
-
+		*/
 	}
 	//********************************
 	//analiza pedido 2020/set
@@ -852,10 +869,10 @@ class Http extends ProtocoloAbstrato {
 	//resposta padrao
 	public String respp() {
 		return //"Server: Guarani 1.1"+lf+
-				"Date: "+data.strHttp()+lf
+				"date: "+data.strHttp()+lf
 				+(pedido.keepAlive
-					?"Keep-Alive: timeout="+(timeOutLN/1000)+", max=1000"+lf
-					:"Connection: close"+lf
+					?"keep-alive: timeout="+(timeOutLN/1000)+", max=1000"+lf
+					:"connection: close"+lf
 				)
 			;
 	}
@@ -869,7 +886,7 @@ class Http extends ProtocoloAbstrato {
 			+respp()
 			+cabPrg
 		;
-		pedido.on("<html><head><title>Dir: <b>"+d+"</b></title>"
+		pedido.on("<html><head><title>Dir: "+d+"</title>"
 			+"\n<script src=\"/js/func.js\"></script>"
 			+"\n<script src=\"/js/funcoes.js\"></script>"
 			+"\n<script src=\"/js/funcoes1.js\"></script>"
@@ -990,7 +1007,7 @@ class Http extends ProtocoloAbstrato {
 		//mime type
 		String tp = ""+Guarani.tipos.getTipo(ext);
 		//ogs.grava("ext("+ext+") tp("+tp+")");
-		if (str.equals(tp,"text/")) {
+		if (str.equals(tp,"text/") || ".js.json.".indexOf(ext)!=-1) {
 			tp += "; charset="+charset;
 		}
 
@@ -1002,7 +1019,7 @@ class Http extends ProtocoloAbstrato {
 			//rever falta verif tamanho
 			if (s.equals(data.strHttp(arq.lastModified()))) {
 				o.print(httpVer+" 304 Not Modified"+lf
-					+ "Content-Type: "+tp+lf
+					+ "content-type: "+tp+lf
 					+respp()
 					+lf
 				);
@@ -1020,14 +1037,14 @@ class Http extends ProtocoloAbstrato {
 			pf = str.longo(str.substrAt(rg,"-"),arq.length());
 		}
 		pedido.cab = httpVer+(rg==null?" 200 OK":" 206 Partial Content")+lf
-			+ "Content-Type: "+tp+lf
-			+ (attach?"Content-Disposition: attachment; filename=\""+nome+"\";"+lf:"")
-			+ "Last-Modified: "+data.strHttp(arq.lastModified())+lf
-			+ "Accept-Ranges: bytes"+lf
+			+ "content-type: "+tp+lf
+			+ (attach?"content-disposition: attachment; filename=\""+nome+"\";"+lf:"")
+			+ "last-modified: "+data.strHttp(arq.lastModified())+lf
+			+ "accept-ranges: bytes"+lf
 			+ (rg==null
-				? 	"Content-Length: "+arq.length()+lf
-				:	"Content-Length: "+(pf-pi)+lf
-					+"Content-Range: bytes "+pi+"-"+(pf-1)+"/"+arq.length()+lf
+				? 	"content-length: "+arq.length()+lf
+				:	"content-length: "+(pf-pi)+lf
+					+"content-range: bytes "+pi+"-"+(pf-1)+"/"+arq.length()+lf
 			  )
 		;
 		//ogs.grava(ext+"="+pedido.cab+"\n===>"+pd);
@@ -1080,7 +1097,7 @@ class Http extends ProtocoloAbstrato {
 				+" by len / env=("+num.format(arq.length(),0)+" / "+num.format(env,0)+")"
 				+" rg=("+rg+")"
 				+" arq=("+arq+")"
-				+" ip=("+pedido.ip+")"
+				+" ip=("+pedido.getIp()+")"
 				//+" pd=("+pedido.ped+")"
 				//+" Last-Modified("+data.strHttp(arq.lastModified())+")"
 			);

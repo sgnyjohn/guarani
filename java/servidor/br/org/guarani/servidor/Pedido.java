@@ -36,8 +36,8 @@ import java.security.cert.X509Certificate;
 //**********************************************
 //**********************************************
 public class Pedido {
-	public httpSessao sessao;
-	public String ip;
+	private httpSessao sessao;
+	private String ip;
  
 	public boolean msie=false,win=false;
 	public String browser;
@@ -59,7 +59,7 @@ public class Pedido {
 	//cabeçalho do pedido
 	public Hashtable ped;
 	//string get... acho
-	public String queryString,raizWeb;
+	public String queryString,postString,raizWeb;
 	//variaveis passadas por get ou post
 	public Hashtable h = new Hashtable();
 	public Hashtable cook = new Hashtable();
@@ -77,6 +77,9 @@ public class Pedido {
 	boolean naoSessao = false;
 	boolean keepAlive = false;
 
+	public String getIp() {
+		return ip;
+	}
 	public boolean naoSessao() {
 		return naoSessao;
 	}
@@ -432,11 +435,16 @@ public class Pedido {
 	//**************************************/
 	public void setGet(String a) {
 		queryString = a;
-		setPost(a);
+		setParam(a);
 	}
 	//**************************************/
 	public void setPost(String a) {
-		a = str.trimm(a);
+		//logs.grava("setPost="+a);
+		postString = a;
+		setParam(a);
+	}
+	//**************************************/
+	public void setParam(String a) {
 		String b[] = str.palavraA(a,"&");
 		for (int i=0;i<b.length;i++) {
 			int ps = b[i].indexOf("=");

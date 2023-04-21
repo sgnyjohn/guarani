@@ -22,7 +22,7 @@ public class hashBD {
 		arquivo1 ar = new arquivo1(nome);
 		ar.csvCabLer(dl,aspa);
 		Hashtable l;
-		while ( ( l = ar.csvLinhaLer(dl,aspa) ) != null ) {
+		while ( ( l = ar.csvLer(dl,aspa) ) != null ) {
 			String ch = (String)l.get(chaveUnica);
 			if (ch==null) {
 				erro("chave null "+l);

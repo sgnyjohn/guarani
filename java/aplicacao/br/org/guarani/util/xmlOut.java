@@ -40,7 +40,8 @@ public class xmlOut {
 		h.put("obj","1");
 		ped.h = h;
 		try {
-			pg.run(ped);
+			pg.initPed(ped);
+			pg.run();
 		} catch (Exception e) {
 		}
 		ped.h = hk;

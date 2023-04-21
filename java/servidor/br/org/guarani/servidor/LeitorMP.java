@@ -30,6 +30,7 @@ public class LeitorMP {
 	byte fim[],bf[],b1[]=new byte[1];
 	int fimt=0,pos=0,rfim=1;
 	boolean erro=false,fimB=false;
+	StringBuffer ps = null;
 	String sErro;
 	//***************************************
 	public boolean setPedido() {
@@ -43,9 +44,19 @@ public class LeitorMP {
 				//var normal
 				//ogs.grava("LeitorMP.setPedido() name="+h.get("name")+" v="+h.get(""));
 				//ped.h.put(str.UnEscape((String)h.get("name")),str.UnEscape((String)h.get("")));
-				ped.h.put(h.get("name"),h.get(""));
+				if (ps==null) {
+					ps = new StringBuffer();
+				} else {
+					ps.append("&");
+				}
+				ps.append(h.get("name"));
+				ps.append(h.get("="));
+				ps.append(h.get(""));
+				//
+				//ped.h.put(h.get("name"),h.get(""));
 			}
 		}
+		ped.setPost(ps.toString());
 		return true;
 	}
 	//***************************************
@@ -100,7 +111,6 @@ public class LeitorMP {
 	public Hashtable item() {
 		//teste();if (true) return null;
 		Hashtable h = new Hashtable();
-  
 		//le o cab...
 		try {
 			byte b[] = new byte[256];

@@ -87,7 +87,7 @@ public class xmlOutI extends xmlOut {
 			return pg.usu;
 		} else if (g.equals("grupos")) {
 			pg.doGrupo("aa");
-			return str.trimm(pg.usuario.gruposS," ,");
+			return str.trimm(pg.getUser().getGroupsS()," ,");
 		}
 		return "# intraO.dad: "+g+"#";
 	}

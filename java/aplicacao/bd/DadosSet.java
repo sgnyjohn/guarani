@@ -13,13 +13,19 @@ import br.org.guarani.util.*;
 	* @version jul/2001
 	*/
 public class DadosSet {
+	public Dados parent;
 	public ResultSet rs = null;
 	public boolean erro,fechado = false;
 	//ResultSet rs;
 	//Pedido ped;
 	//public boolean erro;
 	public static String dl[] = new String[]{"\n","\t","\\n","\\t"};
+	public String sql;
 
+	//****************************************
+	public void log(String s) {
+		logs.grava("jdbc",s);
+	}
 	//****************************************
 	public void toCsv(Pag pg) {
 		int i=0;

@@ -14,6 +14,72 @@ public class str1 extends str {
 	long z=(long)1055793802258.0;
 	long z1=(long)1053979402258.0;
 	static MessageDigest md = null;
+	//*********************************************
+	// coisa minha, leitura string posts ajax
+	public static String hexDEnc(String s) {
+		if (s.indexOf("%")==-1) 
+			return s;
+		String  r = "";
+		for (int i=0;i<s.length();i++) {
+			if (s.charAt(i)=='%'&&i<s.length()-2) {
+				int v = fromHex(s.substring(i+1,i+3));
+				if (v==-1) {
+					r += s.charAt(i);
+				} else {
+					r += (char)v;
+					i += 2;
+				}
+			} else {
+				r += s.charAt(i);
+			}
+		}
+		return r;
+	}
+	public static Hashtable<String,String> textHash(String s) {
+		Hashtable<String,String> r = new Hashtable<String,String>();
+		String v[][] = str.palavraA(str.trimm(s,";"),";",":");
+		for (int i=0;i<v.length;i++) {
+			if (v[i].length<2) {
+				r.put(hexDEnc(v[i][0]),"");
+			} else {
+				r.put(hexDEnc(v[i][0]),hexDEnc(v[i][1]));
+			}
+		}
+		return r;
+	}
+	//**************************************************
+	public static List<String> splitParenteses(String str) {
+		int parents = 0;
+		int ini = 0;
+		List<String> splits = new ArrayList<String>();
+
+		for(int i = 0; i < str.length(); i++) {
+			char ch = str.charAt(i);
+			if(ch == '(')
+				parents++;
+			else if(ch == ')')
+				parents--;
+			else if(parents == 0 && ch ==',') {
+				if(ini != i) // comment out this if if you want to allow empty strings in 
+					// the splits
+					splits.add(str.substring(ini, i));
+					ini = i+1;
+				}
+		}
+		splits.add(str.substring(ini));
+
+		return splits;
+	}
+	/**************************************
+	// primeira coluna da Matriz é o index
+	public static Hashtable palavraH1(String s,String a,String b) {
+		String v[][] = str.palavraA(s,a,b);
+		Hashtable r = new Hashtable();
+		for (int i=0;i<v.length;i++) {
+			r.put(v[i][0],v[i]);
+		}
+		return r;
+	}*/
 	//**************************************/
 	public static String palavraA(String v[][],String a,String b) {
 		String r = "";
@@ -60,9 +126,9 @@ public class str1 extends str {
 		}
 	}
 	//**************************************/
-	public static Map rotulos(String s,String del,String ignora) {
+	public static Map<String,String> rotulos(String s,String del,String ignora) {
 		//str.tb_trim
-		Map<String,String> r = new HashMap();
+		Map<String,String> r = new HashMap<String,String>();
 		String v[] = s.split(del);
 		String ch = str.trimm(v[0],ignora);
 		String chn=null,a=null;
@@ -85,7 +151,7 @@ public class str1 extends str {
 	}	
 	//**************************************/
 	public static Map<String,String> map(String v[]) {
-		Map<String,String> r = new HashMap();
+		Map<String,String> r = new HashMap<String,String>();
 		for (int i=0;i<v.length;i+=2) {
 			r.put(v[i],v[i+1]);
 		}
@@ -153,6 +219,15 @@ public class str1 extends str {
 	//**************************************
 	// byte para hexadecimal. base16
 	private static final char[] HEX_CHARS = "0123456789abcdef".toCharArray();
+	public static int fromHex(String s) {
+		int r = 0;
+		for (int i=0;i<s.length();i++) {
+			int t = "0123456789ABCDEF".indexOf(s.charAt(i));
+			if (t==-1) return t;
+			r += t*Math.pow(16,s.length()-i-1);
+		}
+		return r;
+	}
 	public static String toHex(byte[] buf) {
 		char[] chars = new char[2 * buf.length];
 		for (int i = 0; i < buf.length; ++i) {
@@ -432,14 +507,42 @@ public class str1 extends str {
 		}
 		return maior.substring(p).equals(menor);
 	}
-	
-	//***********************************
+
+	/***********************************
+	// primeira coluna da Matriz é o index
 	public static Hashtable palavraH(String s,String d1,String d2) {
 		String v[][] = str.palavraA(s,d1,d2);
 		Hashtable h = new Hashtable();
-		for (int i=0;i<v.length;i++) {
-			h.put(v[i][0],v[i][1]);
-		}
+		//if (v.length>0&& v[0].length>2) {
+		//	return str1.palavraH1(s,d1,d2);
+		//} else {
+			for (int i=0;i<v.length;i++) {
+				if (v[i].length>1) {
+					h.put(v[i][0],v[i][1]);
+				} else {
+					h.put(v[i][0],new Object(){});
+				}
+			}
+		//}
+		return h;
+	}*/
+	
+	//***********************************
+	// primeira coluna da Matriz é o index
+	public static Hashtable<String,Object> palavraH(String s,String d1,String d2) {
+		String v[][] = str.palavraA(s,d1,d2);
+		Hashtable<String,Object> h = new Hashtable<String,Object>();
+		//if (v.length>0&& v[0].length>2) {
+		//	return str1.palavraH1(s,d1,d2);
+		//} else {
+			for (int i=0;i<v.length;i++) {
+				if (v[i].length>1) {
+					h.put(v[i][0],v[i][1]);
+				} else {
+					h.put(v[i][0],new Object(){});
+				}
+			}
+		//}
 		return h;
 	}
 	

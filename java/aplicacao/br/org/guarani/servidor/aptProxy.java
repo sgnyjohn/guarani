@@ -15,7 +15,7 @@ import br.org.guarani.util.*;
 
 //**************************************************
 //**************************************************
-public class aptProxy implements Prg {
+public class aptProxy extends Prg {
 	//static Hashtable bx = new Hashtable();
 	static estat eIp = new estat("pedidos por ip");
 	static estat eIpB = new estat("bytes por ip");
@@ -37,9 +37,9 @@ public class aptProxy implements Prg {
 		}
 	}
 	//**************************************************
-	public boolean run(Pedido pd) {
+	public boolean run() {
 		//if (true) return false;
-		this.pd = pd;
+		this.pd = ped;
 		
 		//logs.grava("h="+pd.ped);
 		if (pd.getHttpConf("classeP")!=null && prx == null) {

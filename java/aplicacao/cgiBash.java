@@ -69,7 +69,7 @@ public class cgiBash extends PagV {
 				,new String[]{"_guarani=1"
 					,"QUERY_STRING="+(str.vazio(q)?"":q)+""
 					,"REMOTE_USER="+usu
-					,"REMOTE_ADDR="+ped.ip
+					,"REMOTE_ADDR="+ped.getIp()
 					,"REQUEST_METHOD="+ped.ped.get("?")
 					,"SERVER_PROTOCOL=HTTP/1.1"
 					,"HTTP_CONNECTION=close" //4

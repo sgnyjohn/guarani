@@ -14,15 +14,30 @@ public class data {
 	//private static Class c1 = gnu.java.locale.Calendar.class;
 	//private static Class c2 = gnu.java.locale.LocaleInformation.class;
 	private static SimpleDateFormat fusHttp;
-
-	//*********************************
+	//***************************************
+	// tempo
+	public static String tempo(long dif) {
+		dif = dif/1000;
+		short sg = (short)(dif%60);
+		dif = dif/60;
+		short mi = (short)(dif%60);
+		dif = dif/60;
+		short hr = (short)(dif%24);
+		long di = dif/24;
+		return (di>0?di+"d ":"")
+			+(hr>0?hr+"h ":"")
+			+(mi>0?mi+"m ":"")
+			+sg+"s "
+		;
+	}
+	/*********************************
 	public static String tempo(long ms) {
 		ms = ms/1000;
 		int s = (int)Math.floorMod(ms,60);ms=Math.floorDiv(ms,60);
 		int m = (int)Math.floorMod(ms,60);ms=Math.floorDiv(ms,60);
 		int h = (int)Math.floorMod(ms,24);ms=Math.floorDiv(ms,24);
 		return ms+"d "+h+"h "+m+"m "+s+"s";
-	}
+	}*/
 	//*********************************
 	public static long ms(String st) {
 		if (str.vazio(st)) {

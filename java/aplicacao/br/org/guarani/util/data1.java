@@ -84,18 +84,7 @@ public class data1 extends data {
 	//***************************************
 	// tempo
 	public static String diasHMS(long dif) {
-		dif = dif/1000;
-		short sg = (short)(dif%60);
-		dif = dif/60;
-		short mi = (short)(dif%60);
-		dif = dif/60;
-		short hr = (short)(dif%24);
-		long di = dif/24;
-		return (di>0?di+"d ":"")
-			+(hr>0?hr+"h ":"")
-			+(mi>0?mi+"m ":"")
-			+sg+"s "
-		;
+		return data.tempo(dif);
 	}
 	//***************************************
 	public static String linux(String s) {

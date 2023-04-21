@@ -14,10 +14,9 @@ import br.org.guarani.util.*;
 
 //**************************************************
 //**************************************************
-public class authProxy implements Prg {
+public class authProxy extends Prg {
 	//**************************************************
-	public boolean run(Pedido pd) {
-		
+	public boolean run() {
 		return true;
 	}
 	//**************************************************

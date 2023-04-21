@@ -29,12 +29,12 @@ public class PagV extends Pag {
 	public String prefRaiz,prefRaizC;
 	
 	//*****************************************//
-	public boolean devCSS() {
-		return super.devCSS() && doGrupo("dsgn");
+	public Usuario getUser() {
+		return sessao.getUser();
 	}
-	//*****************************************
-	public void js() {
-		super.js();
+	//*****************************************//
+	public void devCSS() {
+		if (doGrupo("dsgn")) super.devCSS();
 	}
 	//*****************************************//
 	private final boolean validaX509() {
@@ -248,18 +248,16 @@ public class PagV extends Pag {
 			grS = ","+u.get("_XXgruposS")+",";
 		}
 		*/
-		return usuario.gruposS.indexOf(","+g+",")!=-1;
+		return usuario.getGroupsS().indexOf(","+g+",")!=-1;
 	}
 	//*****************************************//
-	public boolean run(Pedido ped) {
+	public boolean run(Pedido pd) {
 		
 		long t = data.ms();
 		//é retorno apos validação = recupera dados...
 		if (ped.getString("_retorna_")!=null) {
 			ped.recuperaAmbiente();
 		}
-	
-		super.run(ped);
 
 		//vars instancia
 		sessao = ped.getSessao();

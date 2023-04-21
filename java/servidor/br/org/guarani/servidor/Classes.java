@@ -70,7 +70,8 @@ public class Classes extends ClassLoader {
 			//logs.grava("class","supers="+c.superClasses);
 			if (c.superClasses.indexOf("-br.org.guarani.servidor.Prg>")!=-1) {
 				classL = (Prg)c.classe.newInstance();
-				classL.run(ped);
+				classL.initPed(ped);
+				classL.run();
 			} else {
 				ped.erro("CLASSE: "+nome+", superClass="+c.superClasses+
 					" não tem interface conhecida  conhecida!!",new Exception());

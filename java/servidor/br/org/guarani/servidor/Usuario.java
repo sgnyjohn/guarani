@@ -9,20 +9,40 @@ import br.org.guarani.util.*;
 //********************************
 public class Usuario {
 	//protected static long venceP = str.longo(Guarani.getCfg("logonSegs"),60*5)*1000L;  //5 minutos
-	public static String tpPass = "MD5";
+	//protected static String tpPass = "MD5";
 	static Hashtable usu=new Hashtable();
-	public String dominio, ses;
-	public String nome;
+	protected String dominio, ses;
+	protected String nome;
 	private long dataV=0,dataC; //ultima validacao-criação
 	private long dataA=0; //ultimo acesso validado
 	private long vence;
 	private long nInval=0,nVal=0,nAcess=0;
 	protected boolean validoS = true;
-	public String grupos,gruposS,gruposN;
-	public Hashtable dados;
+	protected String grupos,gruposS,gruposN;
+	protected Hashtable dados;
 		
 	//controle ver hash
 	static long clVer=0L;
+	//**************************************************
+	public boolean validaSenha(Pedido ped,String sn) {
+		return false;
+	}
+	//********************************
+	public String getGroups() {
+		return grupos;
+	}
+	//********************************
+	public String getGroupsS() {
+		return gruposS;
+	}
+	//********************************
+	public String getGroupsN() {
+		return gruposN;
+	}
+	//********************************
+	public String getName() {
+		return nome;
+	}
 	//********************************
 	String UsuarioV() {
 		String r = nome
@@ -60,7 +80,6 @@ public class Usuario {
 		dados.put(Var,Val);
 		return r;
 	}
-		
 	//**************************************************
 	public static void delUsu(String u) {
 		for (Enumeration e = usu.keys();e.hasMoreElements();) {
@@ -93,7 +112,7 @@ public class Usuario {
 		String ch = id+"~"+idSess;
 		Usuario r = (Usuario)usu.get(ch);
 		if (r==null) {
-			String nc = Guarani.getCfg("usuarioClass","br.org.guarani.bd.usuario");
+			String nc = Guarani.getCfg("userClass","br.org.guarani.bd.usuario");
 			Class c = Guarani.findClass(nc);
 			try {
 				r = (Usuario)c.newInstance();

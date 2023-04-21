@@ -53,10 +53,14 @@ public class httpSessao implements ObjectOrd {
 	private boolean valid = false;
 
 	//*****************************************//
+	public Usuario getUser() {
+		return usuario;
+	}
+	//*****************************************//
 	public boolean validaX509(Pedido ped) {
 		X509Certificate x509 = ped.getCliCert();		
 		if (x509==null) {
-			logs.grava("x509","pedido não retornou cert, usuário sem cert?");
+			//logs.grava("x509","pedido não retornou cert, usuário sem cert?");
 			return false;
 		}
 		String a = x509.getSubjectDN().getName();

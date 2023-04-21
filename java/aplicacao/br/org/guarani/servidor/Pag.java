@@ -15,19 +15,20 @@ import br.org.guarani.loader.loaderConf;//opcaoC;
 
 //*****************************************//
 //*****************************************//
-public class Pag implements Prg {
+public class Pag extends Prg {
 	//private static String Cliente = "3WS Sistemas";//"3WS Sistemas";
 	//private static String Setor = "Demonstração";
 	private static loaderConf opC; // = new opcaoC();
 	private static boolean ca = false; 
  
 	//config static
-	protected static boolean iStatic = false;
-	protected static boolean devCSSA = false;
+	//protected static boolean iStatic = false;
+	//protected static boolean devCSSA = false;
 
 	protected Hashtable js = new Hashtable();
-	public Pedido ped;
-	public String op,cl="?";
+	//public Pedido ped;
+	//public String op,cl="?";
+	public String cl="?";
 	protected long tempo;
 	public int margem=10;
 	public String bgcolor="ffffff"; //"abcde";
@@ -48,7 +49,7 @@ public class Pag implements Prg {
 	//pagina tipo obj não tem js, css, etc cuja url tem &obj=1
 	public boolean obj = false;
 	
-	public static String dirJs,dirCss,dirImagens;
+	public static String dirR,dirJs,dirCss,dirImagens;
 	public static String dirLJs,dirLCss,dirLImagens;
 	
 	public String meta = "";
@@ -133,7 +134,9 @@ public class Pag implements Prg {
 		String dig() {
 			if ( !f.exists() ) {
 				dig = "Nexiste";
-				logs.grava("não existe "+f);
+				logs.grava("arqDig: não existe "+f
+					+str.erro(new Exception("arqDig1"))
+				);
 			} else if ( f.lastModified() != data || f.length() != tam ) {
 				arquivo1 a = new arquivo1(""+f);
 				dig = a.md5sum();
@@ -216,7 +219,7 @@ public class Pag implements Prg {
 	}
 	//**************************************
 	public boolean ipLocal() {
-		return Guarani.getCfg("ipLocal","").indexOf(ped.ip)!=-1;
+		return Guarani.getCfg("ipLocal","").indexOf(ped.getIp())!=-1;
 	}
 	//**************************************
 	//enchambra - deveria ser não estático da sessao
@@ -503,8 +506,9 @@ public class Pag implements Prg {
 		return "";
 	}
 	//*****************************************//
-	public boolean run(Pedido pd) {
-		ped = pd;
+	public boolean run() {
+		op = param("op","");
+		//logs.grava("run pd="+ped);
 		incluiJs("func.js");
 		incluiJs("funcoes.js");
 		obj = ped.getString("obj")!=null;
@@ -520,6 +524,11 @@ public class Pag implements Prg {
 		tempo = System.currentTimeMillis();
 		Classe();
 		op = str.seNull(ped.getString("op"),"");
+		return run(ped);
+	}
+	//*****************************************//
+	public boolean run(Pedido pd) {
+
 		return true;
 	}
 	//*****************************************//
@@ -532,12 +541,13 @@ public class Pag implements Prg {
 			return;
 		}
 		String dir = ped.dirRoot();
+		dirR = dir;
 		dirJs = str1.seNulo(ped.getHttpConf("dirJs"),"/js");
-		dirLJs = str1.seNulo(ped.getHttpConf("dirLJs"),dir+"/"+dirJs);
+		dirLJs = str1.seNulo(ped.getHttpConf("dirLJs"),dir+dirJs);
 		dirCss = str1.seNulo(ped.getHttpConf("dirCss"),"/estilos");
-		dirLCss = str1.seNulo(ped.getHttpConf("dirLCss"),dir+"/"+dirCss);
+		dirLCss = str1.seNulo(ped.getHttpConf("dirLCss"),dir+dirCss);
 		dirImagens = str1.seNulo(ped.getHttpConf("dirImagens"),"/imagens");
-		dirLImagens = str1.seNulo(ped.getHttpConf("dirLImagens"),dir+"/"+dirImagens);
+		dirLImagens = str1.seNulo(ped.getHttpConf("dirLImagens"),dir+dirImagens);
 		
 	}
 	//*****************************************//
@@ -566,14 +576,11 @@ public class Pag implements Prg {
 		*/
 	}
 	//*****************************************//
-	public boolean devCSS() {
-		if (!iStatic) {
-			devCSSA = (new File(ped.dirRoot()
-				+"/js/jsCSSEditor/jsCSSEditor.js")).exists();
-			//logs.grava("devCSSA="+devCSSA);
-			iStatic = true;
+	public void devCSS() {
+		String e = "jsCSSEditor/jsCSSEditor.js";
+		if ((new File(dirLJs+"/"+e)).exists()) {
+			incluiJs(e);
 		}
-		return devCSSA;
 	}
 	//*****************************************//
 	public void cab(String titulo,String tit) {
@@ -600,22 +607,13 @@ public class Pag implements Prg {
 		incluiCss(css,false);
 		js();
 
-		if (devCSS()) {// && !ped.msie) {
-			incluiJs("jsCSSEditor/jsCSSEditor.js");
-		}
+		devCSS();
 		
 		ped.on("\n</head>\n");
 		
 		ped.on(
 			"<body "
 			+(estilo==null?"":"class=\""+estilo+"\"")
-			+(devCSS()
-					? " onclick=\"jsCSSEditor(this,event);\""
-					: ""
-			)
-			//+" onload=\"evento('load');\" onfocus=\"evento('focus');\""
-			//+" onresize=\"evento('resize');\""
-			//+" onblur=\"evento('focusOut');\" onunload=\"evento('close');\""
 			+">"
 		);
 
@@ -642,7 +640,7 @@ public class Pag implements Prg {
 			m.invoke(o,new Object[] {});
 			return true;
 		} catch (NoSuchMethodException e) {
-			on("Método "+sm+" não existe no objeto: "+o+"<br>"+ped);
+			on("Método ("+sm+") não existe no objeto: "+o+"<br>"+ped+"\n"+str.erro(e));
 			//ped.erro("ERRO, execMethod() exec método <b>"+sm+"()</b>"+
 			// ", classe=<b>"+cl+"</b>",e);
 		} catch (InvocationTargetException e) {
@@ -756,6 +754,7 @@ public class Pag implements Prg {
 	//*****************************************//
 	public void incluiJs(String e) {
 		dirs();//logs.grava(cabH.size()+" "+e);
+		if (e.charAt(0)!='/') e = dirJs + "/" + e;
 		
 		if (obj) {		
 			return;
@@ -763,7 +762,7 @@ public class Pag implements Prg {
 			return;
 		}
 		hArq.put(e,e);
-		String ad = arqDig(dirLJs+"/"+e);
+		String ad = arqDig(dirR+e);
 		/*/existe?
 		if (ped==null) {
 			logs.grava("incluiJs(): js="+js+" ped=null hArq="+hArq);
@@ -771,7 +770,7 @@ public class Pag implements Prg {
 			ped.on("");
 		*/
 			String s = "<script charset=\"UTF-8\"  type=\"text/javascript\"" //language=\"JavaScript\""
-				+" src=\""+dirJs+"/"+e+(ad!=null?"?md5="+ad:"")+"\">"
+				+" src=\""+e+(ad!=null?"?md5="+ad:"")+"\">"
 				+"</script>"
 			;
 			if (cabFoi) {

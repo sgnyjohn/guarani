@@ -26,6 +26,7 @@ public class arquivo1 extends arquivo {
 	boolean ccFim = false;
 	int mxCampos = 32;
 	public String dl = "\t"; //CSV delimitador colunas
+	public String aspa = "\"";
 	/***************************************************************/
 	public String leTxt(String charSet) {
 		if (!f.exists()) {
@@ -186,12 +187,12 @@ public class arquivo1 extends arquivo {
 	//****************************************************
 	// le uma linha CSV
 	public Hashtable leLinhaCSV(char dl,char aspa)  {
-		return csvLinhaLer(dl,aspa);
+		return csvLer(dl,aspa);
 	}
 	//****************************************************
 	// le uma linha CSV
 	public void csvCabLer(char dl,char aspa)  {
-		Hashtable h = csvLinhaLer(dl,aspa);
+		Hashtable h = csvLer(dl,aspa);
 		csvCampos = new String[h.size()];
 		for (int i=0;i<h.size();i++) {
 			csvCampos[i] = (String)h.get(""+i);
@@ -199,7 +200,10 @@ public class arquivo1 extends arquivo {
 	}
 	//****************************************************
 	// le uma linha CSV
-	public Hashtable csvLinhaLer(char dl,char aspa)  {
+	public Hashtable csvLer()  {
+		return csvLer(dl.charAt(0),aspa.charAt(0));
+	}
+	public Hashtable csvLer(char dl,char aspa)  {
 		if (dl==aspa) { 
 			logs.grava("erro","arquivo1.leLinhaCSV: parametros ERRADOS delimitador igual aspa");
 			return null;

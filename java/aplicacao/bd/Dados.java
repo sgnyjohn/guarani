@@ -9,7 +9,12 @@ package bd;
 
 */
 
-//java.io.EOFException
+/* PROBLEMAS
+
+	nome table upper case?
+
+*/
+ 
 
 import java.util.*;
 import java.sql.*;
@@ -24,7 +29,7 @@ public class Dados {
 
 	//con
 	protected Object[] oC;
-	protected String[] sCon;	
+	public String[] sCon;	
 
 	//bloqueio de base ou tudo
 	private static boolean roTudo = false;
@@ -40,7 +45,40 @@ public class Dados {
  
 	public Pedido ped;
 	public boolean erro = false;
+	public boolean logErro = true;
 	public String sErro = null;
+	private int type = -1; //0=default mysql, 1=sqlite
+	//**************************************
+	// log
+	public static void log(String s) {
+		logs.grava("jdbc",s);
+	}
+	//**************************************
+	// 0 - mysql 1 - sqlite
+	public String textSql(String v) {
+		return "'"+textEscape(v)+"'";
+	}
+	public String textEscape(String v) {
+		if (v==null) return v;
+		if (type()==1) {
+			if (v.indexOf("'")!=-1) {
+				v = str.troca(v,"'","''");
+			}
+		} else {
+			//add contrabarra antes dos caracteres listados.
+			v = strBuf.addContra(v,"\\'\n\r");
+		}
+		return v;
+	}
+	//**************************************
+	// 0 - mysql 1 - sqlite
+	public int type() {
+		if (type==-1) type = str.equals(sCon[1],"jdbc:sqlite:")
+			?1:
+			(str.equals(sCon[1],"jdbc:hsqldb:")?2:0)
+		;
+		return type;
+	}
 	//**************************************
 	//retorna expressao do bd - fazer outras q não mysql
 	public String concatSql(String campos[]) {
@@ -71,9 +109,25 @@ public class Dados {
 	}
 	//****************************************
 	public boolean erro(Throwable e,String sql,int nv) {
-		String er = this+" erro="+e+" nv="+nv+"\n\nsql="+sql+"\n\ntrace= "+str.erro(e);
-		logs.grava("jdbc",er);
-		if (nv==1) {
+		String er = "ERRO: "+this+" erro="+e+" nv="+nv+"\n\nsql="+sql+"\n\ntrace="+str.erro(e)+"";
+		if (nv<1 && ((""+e).indexOf("CommunicationsException")!=-1 || (""+e).indexOf("ConnectionException")!=-1)) {
+			//manda TENTAR NOVAMENTE
+			log("try RE-connection "+e+"\n"+this+"\n"+sql);
+			return false;
+		}
+		if (logErro) log(er);
+		/*
+		 * com.mysql.jdbc.exceptions.jdbc4.MySQLNonTransientConnectionException: No operations allowed after connection closed.
+		 * 
+		 * com.mysql.jdbc.exceptions.jdbc4.CommunicationsException: The last packet 
+					successfully received from the server was 62.425.959 milliseconds ago.  
+			 The last packet sent successfully to the server was 62.425.960 milliseconds
+					ago. is longer than the server configured value of 'wait_timeout'.
+			 You should consider either expiring and/or testing connection validity before
+					use in your application, increasing the server configured values
+					for client timeouts, or using the Connector/J connection property 
+					'autoReconnect=true' to avoid this problem.
+		 * if (nv==1) {
 			if (ped!=null) {
 				ped.on(er);
 			}
@@ -82,19 +136,26 @@ public class Dados {
 			sErro = er;
 			return true;
 		}
-		return false;
+		*/
+		erro = true;
+		sErro = er;
+		return true;
 	}
 	//****************************************
 	public void erro(String s, Exception e) {
 		erro = true;
 		sErro = this+" "+s+"\r\n"+e;
-		logs.grava("jdbc",s+"<hr>"+this+"<hr>"+str.erro(e));
+		log(s+"<hr>"+this+"<hr>"+str.erro(e));
 		if (ped!=null) {
 			ped.erro(s,e);
 		}
 	}
 	//*****************************************
 	public DadosSet executeQuery(String sql) {
+		if (type()==1 && sql.indexOf("concat(")!=-1) {
+			logs.grava("concat","sql="+sql);
+		}
+				
 		sErro = null;
 		erro = false;
 		if (odbc) {
@@ -122,7 +183,7 @@ public class Dados {
 					,ResultSet.CONCUR_READ_ONLY //não aceita alteração
 				);
 				rs = stmt.executeQuery(sql);
-				//logs.grava("jdbc","execSql-fim="+rs);
+				//log("execSql-fim="+rs);
 				//uTest.val = data.ms();
 				if (rs!=null) {
 					break;
@@ -131,27 +192,27 @@ public class Dados {
 				if (erro(e,sql,nv)) {
 					return null;
 				}
-			} catch (Exception e) {
-				if (erro(e,sql,nv)) {
-					return null;
-				}
 			} catch (Throwable e) {
 				if (erro(e,sql,nv)) {
 					return null;
 				}
 			}
-			logs.grava("jdbc","jdbc ERRO mas vai tentar novamente...");
+			//log("jdbc ERRO mas vai tentar novamente...");
 			close();
 			if (!conecta()) {
-				//logs.grava("jdbc","jdbc Não reconectou na 2 tentativa...");
+				//log("jdbc Não reconectou na 2 tentativa...");
 				erro("ERRO na RE-conexção com a BASE 2a tentativa",new Exception("erro conectando na 2 tentativa"));
 				return null;
 			}
 			nv++;
 		
 		} 
-
-		DadosSetJdbc re=new DadosSetJdbc(ped,rs);
+		//set tipo
+		DadosSet re = type()==1
+				?new DadosSetSqlite(ped,rs)
+				:(type()==2?new DadosSetHsql(ped,rs):new DadosSetJdbc(ped,rs))
+		;
+		re.parent = this;
 		re.sql = sql;
 		return re;
 	}
@@ -162,7 +223,7 @@ public class Dados {
 	//***********************************
 	// bloqueia base para carga total....
 	public static synchronized String block(String ch,String motivo) {
-		//ogs.grava("jdbc","block: ch="+ch+":"+motivo+" e="+str.erro(new Exception()));
+		//ogs("block: ch="+ch+":"+motivo+" e="+str.erro(new Exception()));
 		
 		Object o[] = (Object[])oCfg.get(ch);
 		String r = (String)o[6];
@@ -172,7 +233,7 @@ public class Dados {
 				//so quer o status
 				return r;
 			} else if (str.vazio(r)) {
-				logs.grava("jdbc","jdbc bloqueando "+ch+" motivo: "+motivo);
+				log("jdbc bloqueando "+ch+" motivo: "+motivo);
 				//hBlock.put(ch,motivo);
 				o[6] = motivo;
 				return null;
@@ -180,7 +241,7 @@ public class Dados {
 				return r;
 			}
 		} else {
-			logs.grava("jdbc","jdbc liberando "+ch+" motivo: "+motivo);
+			log("jdbc liberando "+ch+" motivo: "+motivo);
 			//hBlock.remove(ch);
 			o[6] = "";
 		}
@@ -254,13 +315,13 @@ public class Dados {
 					s[i] = str.trimm(s1[i]);
 				}
 				s[1] = str.troca(s[1],"*",str.leftAt(Base,"@"));
-				logs.grava("jdbc","ch="+ch+" Base="+Base+" chD="+chD+" assume virtual e clona!");
+				log("ch="+ch+" Base="+Base+" chD="+chD+" assume virtual e clona!");
 				//0="+s[0]+" 1="+s[1]);
 				//new Object[]{s,(Connection)null,nomeG,null,new longo(0),""};
 				v = novaCon(nomeG,s);
 				oCfg.put(ch,v);
 			} else {
-				logs.grava("jdbc","Não encontrou a conexão padrão: "
+				log("Não encontrou a conexão padrão: "
 					+chD+" para base "+Base);
 			}
 		}
@@ -281,7 +342,7 @@ public class Dados {
 			odbc = true;
 			DB = new cliOdbc(ped);
 			if (!DB.conecta(sCon[1],sCon[2])) {
-				logs.grava("jdbc","cliOdbc:"+sCon[1]+" "+sCon[2]+" "+DB.sErro);
+				log("cliOdbc:"+sCon[1]+" "+sCon[2]+" "+DB.sErro);
 				sErro = DB.sErro;
 				erro = true;
 			}
@@ -355,7 +416,7 @@ public class Dados {
 					return -1;
 				}
 			}
-			logs.grava("jdbc","jdbc ERRO mas vai tentar novamente...");
+			//log("jdbc ERRO mas vai tentar novamente...");
 			close();
 			if (!conecta()) {
 				erro("ERRO na conexção com a BASE 2a tentativa",new Exception("erro conectando na 2 tentativa"));
@@ -370,16 +431,16 @@ public class Dados {
 		boolean r = dl.con!=null;
 		if (!r) {
 			try {
-				logs.grava("jdbc","Vai proc classe="+dl.sCon[0]);
+				log("Vai proc classe="+dl.sCon[0]);
 				Class c = Guarani.findClass(dl.sCon[0]); //Class.forName(dl.sCon[0]);
 				if (c==null) {
-					logs.grava("jdbc","não achou driver jdbc: "+dl.sCon[0]);
+					log("não achou driver jdbc: "+dl.sCon[0]);
 					return false;
 				}
-				logs.grava("jdbc","Vai instanc classe="+dl.sCon[0]);
+				log("Vai instanc classe="+dl.sCon[0]);
 				Object o = c.newInstance();
 				if (c==null) {
-					logs.grava("jdbc","não conseguiu instanciar driver jdbc: "+dl.sCon[0]);
+					log("não conseguiu instanciar driver jdbc: "+dl.sCon[0]);
 					return false;
 				}
 			//} catch (Throwable e) {
@@ -389,7 +450,7 @@ public class Dados {
 			}
 			
 			try {
-				logs.grava("jdbc","Vai "+((dl.con==null)?"":"RE")+
+				log("Vai "+((dl.con==null)?"":"RE")+
 					"Conectar "+dl.sCon[0]+" ~ "+str.leftAt(dl.sCon[1],"?")+
 					" "+dl.con
 					+" Base="+dl.Base+" nomeG="+dl.nomeG+" ch="+dl.ch+" nomeInterno="+dl.nomeInterno //ch,nomeG,nomeInterno,Base;
@@ -400,12 +461,15 @@ public class Dados {
 					dl.sCon[1] = str.troca(dl.sCon[1],"*",dl.nomeG);
 				}
 				Properties props = new Properties();
-				props.put("useInformationSchema", "true");				
+				//dl.type = str.equals(dl.sCon[1],"jdbc:sqlite:")?1:0;
+				if (dl.type()==0) {
+					props.put("useInformationSchema", "true");				
+				}
 				dl.con = DriverManager.getConnection(dl.sCon[1],props);
 				dl.oC[3] = str.substrRatAt(dl.sCon[1],"/","?");
 				r = true;
-				logs.grava("jdbc","conectou");
-				//logs.grava("jdbc","Cat="+vCon[nCon].getCatalog());
+				log("conectou type="+dl.type+" str=("+dl.sCon[1]+")");
+				//log("Cat="+vCon[nCon].getCatalog());
 			} catch (Exception e) {
 				dl.erro("conecta=",e);
 			}
@@ -419,39 +483,6 @@ public class Dados {
 			return con!=null;
 		}
 		return true;
-		/*
-		boolean r = false;
-		try {
-			if (con != null) {
-				if (data.ms()-uTest.val<600000) { //10 minutos
-					r = true;
-				} else if (!con.isClosed()) {
-					logs.grava("jdbc",(data.ms()-uTest.val)+",10min testou con ok");
-					r = true;
-				} else {
-					logs.grava("jdbc","c0: é closed!!="+this);
-				}
-			}
-			if (!r) {
-				try {
-					con.close();
-				} catch (Exception e) {
-					erro("recuperável conecta oCon.close",e);
-					erro = false;
-				}
-				con = null;
-			}
-		} catch (SQLException se) {
-			try {
-				con.close();
-			} catch (Exception e) {
-				erro("recuperável conecta oCon.close",e);
-				erro = false;
-			}
-			con = null;
-		}
-		return r;
-		*/
 	}
 	//*****************************************
 	private boolean conecta() {
@@ -492,7 +523,7 @@ public class Dados {
 	}
 	//****************************************
 	public String toString() {
-		return "Dados={ch="+ch+", nomeInterno="+nomeInterno+"}";
+		return "Dados={ch="+ch+"/"+nomeInterno+",classe="+sCon[1]+"}";
 	}
 	//*****************************************
 	public static synchronized void initCfg() {
@@ -501,17 +532,17 @@ public class Dados {
 		if (Guarani.get("dados.oCfg")!=null) {
 			try {
 				oCfg = (Hashtable)Guarani.get("dados.oCfg");
-				logs.grava("jdbc","jdbc->Recuperada conexcoes...");
+				log("jdbc->Recuperada conexcoes...");
 				return;
 			} catch (Exception e) {
-				logs.grava("jdbc","jdbc->Erro recuperando de guarani="
+				log("jdbc->Erro recuperando de guarani="
 					+str.erro(e)
 				);
 			}
 		}
 		
 		//carrega configs do Guarani
-		logs.grava("jdbc","init cfg!!");
+		log("init cfg!!");
 		Hashtable cg = new Hashtable();
 		Hashtable c = (Hashtable)Guarani.cnf_jdbc;
 		int i = c.size();
@@ -520,7 +551,7 @@ public class Dados {
 		oCfg = new Hashtable();
 		for (Enumeration e = c.keys() ; e.hasMoreElements() ;) {
 			k = (String)e.nextElement();
-			logs.grava("jdbc","jdbc==>"+k); //+"="+c.get(k));
+			log("jdbc==>"+k); //+"="+c.get(k));
 			String v[] = str.palavraA((String)c.get(k),"~");
 			oCfg.put(k.toLowerCase()
 				//,new Object[]{v,(Connection)null,k,null,new longo(0),""}
@@ -529,7 +560,7 @@ public class Dados {
 			try {
 				Class.forName(v[0]).newInstance();
 			} catch (Exception ee) {
-				logs.grava("jdbc","JDBC Classe não existe: "+v[0]);
+				log("JDBC Classe não existe: "+v[0]);
 			}
 			pos++;
 		}

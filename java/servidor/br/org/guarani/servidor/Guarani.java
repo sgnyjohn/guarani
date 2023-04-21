@@ -569,9 +569,9 @@ public class Guarani {
 				ped.on("<html>"
 					+"<head><title>Reiniciando SERVIDOR</title></head>"
 					+"<body><h1>Reiniciando Servidor</h1>"
-					+"<div class=compil><p>"+str.troca(s,"\n","</p><p>")+"</p></div>"
-					+"<script language=\"JavaScript\" src=\"/js/jan.js\"></script>"
-					+"<script>function aaa(){var p=new pedido();p.set('__segs',ms());window.location=p.atalho();};setTimeout('aaa()',3000);</script>"
+					+"<div class=compil><p>"+str.troca(s,"\n","</p>\n<p>")+"</p>\n</div>"
+					//+"<script language=\"JavaScript\" src=\"/js/jan.js\"></script>"
+					//+"<script>function aaa(){var p=new pedido();p.set('__segs',ms());window.location=p.atalho();};setTimeout('aaa()',3000);</script>"
 					+"</body></html>"
 				);
 				stop(0);
@@ -579,7 +579,7 @@ public class Guarani {
 			} else if (vml.reLoad()) {
 				String s = vml.compil();
 				classVer = data.ms();
-				ped.on("<div class=compil><p>"+str.troca(s,"\n","</p><p>")+"</p></div>");
+				ped.on("<div class=compil><p>"+str.troca(s,"\n","</p>\n<p>")+"</p>\n</div>");
 			}
 		}
 
@@ -603,7 +603,8 @@ public class Guarani {
 			Prg classL = null;
 			try {
 				classL=(Prg)csl.newInstance();
-				classL.run(ped);
+				classL.initPed(ped);
+				classL.run();
 				return true;
 			} catch ( Exception t ) {
 				logs.grava("servidor","Guarani.execClasse(): "+t);

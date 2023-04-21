@@ -19,7 +19,6 @@ import br.org.guarani.util.*;
 //****************************
 //****************************
 public class DadosSetJdbc extends DadosSet {
-	public String sql;
 	Pedido ped;
 	public ResultSetMetaData oRsMd=null;
 	boolean fim = false;
@@ -388,8 +387,12 @@ public class DadosSetJdbc extends DadosSet {
 		try {
 			return rs.getString(s);//new String(rs.getBytes(s));
 		} catch (Exception e) {
+			String se = ""+e;
+			if (se.indexOf("not be represented")!=-1) {
+				return "";
+			}
 			//logs.grava("erro pegando valor de "+s+" "+str.erro(e)+" "+sql());
-			return "?ds: campo não existe: "+s+"?";
+			return "?nExist."+s;
 			//erro("getString("+s+")",e);
 		}
 	}
@@ -399,9 +402,14 @@ public class DadosSetJdbc extends DadosSet {
 		try {
 			return rs.getString(pos);
 		} catch (Exception e) {
-			erro("getString("+pos+")",e);
+			String se = ""+e;
+			if (se.indexOf("not be represented")!=-1) {
+				return "";
+			}
+			//logs.grava("erro pegando valor de "+s+" "+str.erro(e)+" "+sql());
+			return "?nExist"+pos;
+			//erro("getString("+s+")",e);
 		}
-		return null;
 	}
 	//****************************************
 	public void erro(String s, Exception e) {
@@ -431,7 +439,7 @@ public class DadosSetJdbc extends DadosSet {
 		try {
 			return oRsMd.getColumnCount();
 		} catch (Exception e) {
-			erro("contaCampos",e);
+			log("contaCampos "+str.erro(e));
 		}
 		return 0;
 	}
@@ -470,7 +478,7 @@ public class DadosSetJdbc extends DadosSet {
 		try {
 			return oRsMd.getColumnName(i);
 		} catch (Exception e) {
-			erro("contaCampos",e);
+			log("?getNomeCampo:"+i+" "+e);
 		}
 		return null;
 	}
